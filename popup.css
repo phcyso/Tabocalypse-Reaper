@@ -1,0 +1,74 @@
+
+*{ box-sizing: border-box; }
+:root{
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --text: #0b0b0f;
+  --muted: #6b7280;
+  --line: #e5e7eb;
+  --card: #ffffff;
+  --badge: #ede9fe;
+  --badgeText: #3b0764;
+  --accent: #7c3aed;
+  --accent-2: #a78bfa;
+  --danger: #7c2d12;
+  --danger-bg: #fee2e2;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg: #0f0f14;
+    --text: #f5f5f7;
+    --muted: #9ca3af;
+    --line: #1f2937;
+    --card: #111119;
+    --badge: #3b0764;
+    --badgeText: #ede9fe;
+    --accent: #a78bfa;
+    --accent-2: #c4b5fd;
+    --danger: #fecaca;
+    --danger-bg: #7f1d1d;
+  }
+}
+html, body{ height: 100%; }
+body{ font: 12px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif; width: 580px; margin:0; color:var(--text); background:var(--bg); }
+
+.brandbar{ display:flex; gap:10px; align-items:center; padding:10px 12px; border-bottom:1px solid var(--line); background:linear-gradient(90deg, rgba(124,58,237,0.1), transparent 40%); }
+.brandLogo{ width:24px; height:24px; border-radius:6px; }
+.brandName{ font-weight:800; letter-spacing:0.2px; }
+.brandTag{ color:var(--muted); }
+
+.toolbar{ display:flex; gap:8px; align-items:center; padding:8px 12px; border-bottom:1px dashed var(--line); position:sticky; top:0; background:var(--bg); z-index:3; }
+#search{ flex:1; padding:6px 10px; border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--text); }
+.opt{ font-size:11px; color:var(--muted); white-space:nowrap; }
+#sort, #refresh{ padding:6px 10px; border:1px solid var(--line); background:var(--card); color:var(--text); border-radius:8px; cursor:pointer; }
+
+#stats{ padding:6px 12px; color:var(--muted); border-bottom:1px dashed var(--line); background:var(--bg); }
+.tree{ padding:8px 10px 12px 10px; max-height: 640px; overflow:auto; }
+
+.hostCard{ border:1px solid var(--line); border-radius:14px; background:var(--card); margin:10px 0; overflow:hidden; }
+.hostHeader{ display:flex; align-items:center; gap:8px; padding:10px; background:rgba(124,58,237,0.05); }
+.hostHeader .hostName{ font-weight:700; }
+.hostHeader .badge{ background:var(--badge); color:var(--badgeText); font-weight:700; font-size:11px; padding:2px 8px; border-radius:999px; }
+.hostHeader .twisty{ border:1px solid var(--line); background:var(--card); cursor:pointer; width:26px; height:24px; border-radius:8px; }
+.hostHeader .close{ padding:4px 10px; border:1px solid var(--accent); background:transparent; color:var(--accent); border-radius:999px; cursor:pointer; font-weight:700; }
+.hostHeader .close:hover{ background:rgba(124,58,237,0.1); }
+.dot{ width:8px; height:8px; border-radius:999px; background:var(--accent); display:inline-block; }
+
+.hostBody{ padding:8px 10px; }
+.cluster{ border-left:2px dotted var(--line); margin:4px 0 10px 10px; padding-left:12px; }
+.clusterHeader{ display:flex; align-items:center; gap:8px; padding:6px 0; }
+.clusterHeader .clusterName{ font-weight:600; }
+.clusterHeader .badge{ background:var(--badge); color:var(--badgeText); padding:1px 6px; border-radius:999px; }
+.clusterHeader .twisty{ border:1px solid var(--line); background:var(--card); cursor:pointer; width:24px; height:22px; border-radius:8px; }
+.clusterHeader .close{ padding:2px 8px; border:1px solid var(--accent); background:transparent; color:var(--accent); border-radius:999px; cursor:pointer; }
+
+.clusterBody{ margin-top:4px; }
+.tab{ display:flex; align-items:center; gap:8px; padding:4px 6px; border-radius:8px; }
+.tab:hover{ background:rgba(124,58,237,0.08); }
+.tab .x{ border:none; background:transparent; color:var(--accent); cursor:pointer; font-size:12px; }
+.tab .ico{ width:14px; height:14px; border-radius:3px; background:#e5e7eb; }
+.tab .title{ text-decoration:none; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:390px; }
+.tab .path{ color:var(--muted); margin-left:auto; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+.small{ color:var(--muted); font-size:11px; }
+.spacer{ flex:1; }

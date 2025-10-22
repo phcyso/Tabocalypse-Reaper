@@ -1,0 +1,71 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https: data: moz-extension:; style-src 'self' 'unsafe-inline';">
+  <title>Tabocalypse Reaper</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="brandbar">
+    <img src="logo.svg" class="brandLogo" alt="" />
+    <div class="brand">
+      <div class="brandName">Tabocalypse Reaper</div>
+      <div class="brandTag small">End your tab chaos with one clean sweep</div>
+    </div>
+    <div class="spacer"></div>
+    <select id="sort" title="Sort">
+      <option value="count">Count</option>
+      <option value="alpha">A→Z</option>
+    </select>
+  </header>
+
+  <section class="toolbar">
+    <input id="search" type="search" placeholder="Filter (host/path/title)" aria-label="Filter">
+    <label class="opt"><input type="checkbox" id="excludePinned" checked> Exclude pinned</label>
+    <label class="opt"><input type="checkbox" id="normalize" checked> Normalize URLs</label>
+    <button id="refresh">Refresh</button>
+  </section>
+
+  <div id="stats"></div>
+  <div id="tree" class="tree"></div>
+
+  <template id="hostTemplate">
+    <section class="hostCard">
+      <header class="hostHeader">
+        <span class="dot"></span>
+        <span class="hostName"></span>
+        <span class="badge"></span>
+        <div class="spacer"></div>
+        <button class="close" title="Close all in host">Reap</button>
+        <button class="twisty" aria-label="toggle" title="Toggle">▸</button>
+      </header>
+      <div class="hostBody"></div>
+    </section>
+  </template>
+
+  <template id="clusterTemplate">
+    <div class="cluster">
+      <header class="clusterHeader">
+        <span class="clusterName"></span>
+        <span class="badge small"></span>
+        <div class="spacer"></div>
+        <button class="close" title="Close cluster">Reap</button>
+        <button class="twisty" aria-label="toggle" title="Toggle">▸</button>
+      </header>
+      <div class="clusterBody"></div>
+    </div>
+  </template>
+
+  <template id="tabTemplate">
+    <div class="tab">
+      <button class="x" title="Close tab">✕</button>
+      <img class="ico" alt="" referrerpolicy="no-referrer" />
+      <a class="title" target="_self"></a>
+      <span class="path small"></span>
+    </div>
+  </template>
+
+  <script src="popup.js"></script>
+</body>
+</html>
