@@ -1,0 +1,23 @@
+{
+  "name": "tabocalypse-reaper",
+  "version": "1.0.0",
+  "description": "## Approach validation & assumptions - **Shallow hierarchy (Host → Cluster) is faster** than deep trees for scanning/closing; aligns with Sidebery/Tab Manager patterns. (Refs below) - **Cluster keys**: first path segment; GitHub = org/repo; AWS = first segment. Good balance of meaning vs. complexity. - **Counts**: bottom‑up unique IDs; cluster = length; host = union of clusters. - **Favicons**: enable via CSP `img-src https: data: moz-extension:`; significantly improves scan speed. - **Theme adaptation**: try `browser.theme.getCurrent()`; fallback `prefers-color-scheme`. - **Bulk close**: single `tabs.remove([...])` per group.",
+  "main": "popup.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "web-ext": "web-ext"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/phcyso/Tabocalypse-Reaper.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/phcyso/Tabocalypse-Reaper/issues"
+  },
+  "homepage": "https://github.com/phcyso/Tabocalypse-Reaper#readme",
+  "devDependencies": {
+    "web-ext": "^9.0.0"
+  }
+}
