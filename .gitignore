@@ -1,3 +1,5 @@
 tabocalypse-reaper.zip
 node_modules
 dist
+web-ext-artifacts
+*.png
