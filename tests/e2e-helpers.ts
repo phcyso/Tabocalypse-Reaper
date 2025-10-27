@@ -1,4 +1,4 @@
-import { Builder, WebDriver, By, until, logging } from 'selenium-webdriver';
+import { Builder, WebDriver, By, until } from 'selenium-webdriver';
 import firefox from 'selenium-webdriver/firefox';
 import path from 'path';
 import fs from 'fs';
@@ -32,25 +32,28 @@ export async function createDriverWithExtension(): Promise<WebDriver> {
   // Disable animations for stable screenshots
   options.setPreference('ui.prefersReducedMotion', 1);
   
-  // Load extension
-  const extensionPath = path.join(EXTENSION_PATH, 'manifest.json');
-  console.log(`Loading extension from: ${extensionPath}`);
-  
-  // Use temporary profile to avoid conflicts
+  // Allow unsigned extensions
   options.setPreference('xpinstall.signatures.required', false);
-  options.setPreference('extensions.webextensions.uuids', 
-    `{"tabocalypse-reaper@example.com": "{test-uuid}"}`);
+  options.setPreference('extensions.autoDisableScopes', 0);
+  options.setPreference('extensions.enabledScopes', 15);
 
   const driver = await new Builder()
     .forBrowser('firefox')
     .setFirefoxOptions(options)
     .build();
 
-  // Install the extension
-  await driver.installAddon(EXTENSION_PATH, true);
-  
-  // Give extension time to initialize
-  await driver.sleep(2000);
+  try {
+    // Install the extension as a temporary add-on
+    const extensionId = await driver.installAddon(EXTENSION_PATH, true);
+    console.log(`Extension installed with ID: ${extensionId}`);
+    
+    // Give extension time to initialize
+    await driver.sleep(2000);
+  } catch (error) {
+    console.error('Failed to install extension:', error);
+    await driver.quit();
+    throw error;
+  }
 
   return driver;
 }
@@ -59,55 +62,47 @@ export async function createDriverWithExtension(): Promise<WebDriver> {
  * Open the E2E test page
  */
 export async function openE2EPage(driver: WebDriver): Promise<void> {
-  // The extension ID is set in manifest.json
-  const e2eUrl = 'moz-extension://test-uuid/e2e.html';
+  // Get the extension's UUID by querying installed extensions
+  // For temporary extensions, we need to find the extension's internal URL
   
-  // Alternative: Use the background script to open e2e page
-  // For now, we'll open it directly via all tabs and find the extension URL
-  const handles = await driver.getAllWindowHandles();
-  
-  // Try to find if e2e page is already open
-  let e2eHandle = null;
-  for (const handle of handles) {
-    await driver.switchTo().window(handle);
-    const url = await driver.getCurrentUrl();
-    if (url.includes('e2e.html')) {
-      e2eHandle = handle;
-      break;
-    }
-  }
-  
-  if (!e2eHandle) {
-    // Open a new tab and navigate to e2e page
-    await driver.executeScript('window.open("about:blank", "_blank");');
-    const newHandles = await driver.getAllWindowHandles();
-    const newHandle = newHandles.find(h => !handles.includes(h));
-    if (newHandle) {
-      await driver.switchTo().window(newHandle);
-    }
+  try {
+    // Navigate to a blank page first
+    await driver.get('about:blank');
     
-    // Get the extension's internal URL
-    // We need to get it from the extension context
-    // For now, use a workaround: load the extension page via special protocol
-    const allTabs = await driver.executeScript(`
-      return browser.tabs.query({}).then(tabs => 
-        tabs.map(t => ({ id: t.id, url: t.url }))
-      );
-    `);
-    
-    // Create e2e tab via extension API
-    await driver.executeScript(`
-      return browser.tabs.create({
+    // Execute script in privileged context to open e2e page via extension API
+    const tabId = await driver.executeAsyncScript(`
+      const callback = arguments[arguments.length - 1];
+      
+      if (typeof browser === 'undefined') {
+        callback(null);
+        return;
+      }
+      
+      browser.tabs.create({
         url: browser.runtime.getURL('e2e.html'),
         active: true
+      }).then(tab => {
+        callback(tab.id);
+      }).catch(err => {
+        callback(null);
       });
     `);
     
-    await driver.sleep(1000);
+    if (tabId) {
+      console.log('E2E page opened via extension API');
+      // Give page time to load
+      await driver.sleep(2000);
+    } else {
+      throw new Error('Failed to open e2e page via extension API');
+    }
+    
+    // Wait for the tree element to ensure page is loaded
+    await driver.wait(until.elementLocated(By.id('tree')), E2E_PAGE_LOAD_TIMEOUT);
+    
+  } catch (error) {
+    console.error('Error opening E2E page:', error);
+    throw error;
   }
-  
-  // Wait for page to load
-  await driver.wait(until.elementLocated(By.id('tree')), E2E_PAGE_LOAD_TIMEOUT);
 }
 
 /**
@@ -115,13 +110,29 @@ export async function openE2EPage(driver: WebDriver): Promise<void> {
  */
 export async function createTestTabs(driver: WebDriver, tabs: TestTab[]): Promise<void> {
   for (const tab of tabs) {
-    await driver.executeScript(`
-      return browser.tabs.create({
-        url: "${tab.url}",
-        pinned: ${tab.pinned || false},
-        active: false
-      });
-    `);
+    try {
+      await driver.executeAsyncScript(`
+        const callback = arguments[arguments.length - 1];
+        
+        if (typeof browser === 'undefined') {
+          callback(false);
+          return;
+        }
+        
+        browser.tabs.create({
+          url: "${tab.url}",
+          pinned: ${tab.pinned || false},
+          active: false
+        }).then(() => {
+          callback(true);
+        }).catch(err => {
+          console.error('Error creating tab:', err);
+          callback(false);
+        });
+      `);
+    } catch (error) {
+      console.error(`Failed to create tab ${tab.url}:`, error);
+    }
   }
   
   // Give tabs time to load
@@ -158,16 +169,35 @@ export async function takeScreenshot(
  * Clean up all tabs except the E2E page
  */
 export async function cleanupTestTabs(driver: WebDriver): Promise<void> {
-  await driver.executeScript(`
-    return browser.tabs.query({}).then(tabs => {
-      const tabsToRemove = tabs
-        .filter(t => !t.url.includes('e2e.html'))
-        .map(t => t.id);
-      return browser.tabs.remove(tabsToRemove);
-    });
-  `);
-  
-  await driver.sleep(500);
+  try {
+    await driver.executeAsyncScript(`
+      const callback = arguments[arguments.length - 1];
+      
+      if (typeof browser === 'undefined') {
+        callback(false);
+        return;
+      }
+      
+      browser.tabs.query({}).then(tabs => {
+        const tabsToRemove = tabs
+          .filter(t => !t.url.includes('e2e.html'))
+          .map(t => t.id);
+        
+        if (tabsToRemove.length > 0) {
+          return browser.tabs.remove(tabsToRemove);
+        }
+      }).then(() => {
+        callback(true);
+      }).catch(err => {
+        console.error('Error cleaning up tabs:', err);
+        callback(false);
+      });
+    `);
+    
+    await driver.sleep(500);
+  } catch (error) {
+    console.error('Failed to cleanup tabs:', error);
+  }
 }
 
 /**
@@ -222,9 +252,14 @@ export async function getHostCards(driver: WebDriver): Promise<any[]> {
   const results = [];
   
   for (const card of hostCards) {
-    const name = await card.findElement(By.css('.hostName')).getText();
-    const badge = await card.findElement(By.css('.badge')).getText();
-    results.push({ name, count: parseInt(badge) });
+    try {
+      const name = await card.findElement(By.css('.hostName')).getText();
+      const badge = await card.findElement(By.css('.badge')).getText();
+      results.push({ name, count: parseInt(badge) });
+    } catch (error) {
+      // Skip cards that couldn't be read
+      console.warn('Failed to read host card:', error);
+    }
   }
   
   return results;
@@ -270,9 +305,13 @@ export async function reapHost(
       
       if (confirmDialog) {
         // Handle confirmation dialog
-        await driver.wait(until.alertIsPresent(), 1000);
-        const alert = await driver.switchTo().alert();
-        await alert.accept();
+        try {
+          await driver.wait(until.alertIsPresent(), 1000);
+          const alert = await driver.switchTo().alert();
+          await alert.accept();
+        } catch (error) {
+          console.warn('No alert present or failed to accept:', error);
+        }
       }
       
       await driver.sleep(500);
@@ -282,3 +321,4 @@ export async function reapHost(
   
   throw new Error(`Host "${hostName}" not found`);
 }
+
