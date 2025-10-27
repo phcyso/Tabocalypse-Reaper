@@ -39,10 +39,12 @@ function createNode(name, kind="node") {
 
 function clusterFor(u) {
   const segs = u.pathname.split("/").filter(Boolean);
-  if (u.host.endsWith("github.com") && segs.length >= 2) {
+  // Check hostname exactly, not substring match
+  if (u.hostname === 'github.com' && segs.length >= 2) {
     return { key: `${segs[0]}/${segs[1]}`, remainder: segs.slice(2) };
   }
-  if (u.host.includes("aws.amazon.com") || u.host.includes("docs.aws.amazon.com")) {
+  // Check hostname exactly for AWS services
+  if (u.hostname === 'console.aws.amazon.com' || u.hostname === 'docs.aws.amazon.com') {
     return { key: segs[0] || "/", remainder: segs.slice(1) };
   }
   return { key: segs[0] || "/", remainder: segs.slice(1) };
