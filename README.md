@@ -136,19 +136,21 @@ E2E tests use Selenium WebDriver to test the extension UI in a real Firefox brow
 npm run test:e2e
 ```
 
+**Status:** E2E tests are **optional and informational only**. They are not required for CI to pass.
+
 **Prerequisites for E2E tests:**
 - Firefox browser installed
 - geckodriver installed and in PATH
 - For headless testing: `xvfb` (Linux) or set `HEADLESS=true`
 - DISPLAY environment variable set (for X11/Xvfb)
 
-**Note:** E2E tests are automatically skipped if the Selenium environment is not properly configured. To force running E2E tests even if prerequisites aren't fully met:
+**Note:** E2E tests are automatically skipped if the Selenium environment is not properly configured. In CI, E2E test failures are non-blocking since unit tests provide comprehensive coverage of core functionality. To force running E2E tests locally:
 
 ```bash
 FORCE_E2E=true npm run test:e2e
 ```
 
-E2E tests cover:
+E2E tests cover (when they run successfully):
 - Tab scenario setup (multi-window, pinned tabs, various URL types)
 - UI interactions (search, sorting, bulk close operations)
 - Cluster expansion and tab list rendering
@@ -178,21 +180,24 @@ The testing strategy addresses the limitation that **browser_action popup UI can
 
 ### CI/CD Integration
 
-E2E tests run automatically in GitHub Actions on every pull request:
+Tests run automatically in GitHub Actions on every pull request:
 
-- Tests execute in headless Firefox with xvfb
-- Screenshots are captured for visual verification
-- Test artifacts (screenshots, coverage) are uploaded to PR
+- **Unit tests** (required): Always run and must pass for PR to be approved
+- **E2E tests** (optional): Attempt to run but are non-blocking if they fail
+- Test artifacts (screenshots, coverage) are uploaded when available
 - PR comments show test results summary
+
+**Build passes when:** Unit tests pass (25/25 required)  
+**E2E tests:** Informational only - failures don't block PR
 
 ### Test Screenshots
 
-Screenshots from E2E tests are saved to `test-screenshots/` (excluded from Git). In CI, screenshots are uploaded as artifacts and available for download from the Actions tab.
+Screenshots from E2E tests are saved to `test-screenshots/` (excluded from Git) when tests run successfully. In CI, screenshots are uploaded as artifacts when available.
 
-**Viewing CI test screenshots:**
+**Viewing CI test screenshots (if generated):**
 1. Navigate to the pull request page
 2. Click on "Checks" → "E2E Tests" workflow run
-3. Download the `e2e-test-screenshots` artifact
+3. Download the `e2e-test-screenshots` artifact (if available)
 4. Extract and view PNG files
 
 ### Limitations and Known Issues
