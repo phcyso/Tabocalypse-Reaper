@@ -26,8 +26,8 @@ function clusterFor(u) {
   if (u.hostname === 'github.com' && segs.length >= 2) {
     return { key: `${segs[0]}/${segs[1]}`, remainder: segs.slice(2) };
   }
-  // Check hostname exactly for AWS services
-  if (u.hostname === 'console.aws.amazon.com' || u.hostname === 'docs.aws.amazon.com') {
+  // Check hostname exactly for AWS services, including subdomains
+  if (u.hostname.endsWith('.aws.amazon.com') || u.hostname === 'aws.amazon.com') {
     return { key: segs[0] || "/", remainder: segs.slice(1) };
   }
   return { key: segs[0] || "/", remainder: segs.slice(1) };

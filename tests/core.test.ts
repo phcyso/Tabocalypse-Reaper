@@ -79,6 +79,20 @@ describe('Core Logic Unit Tests', () => {
       expect(result.remainder).toEqual(['latest', 'dg', 'welcome.html']);
     });
 
+    test('should cluster AWS regional endpoints', () => {
+      const url = new URL('https://us-west-2.console.aws.amazon.com/s3/buckets');
+      const result = clusterFor(url);
+      expect(result.key).toBe('s3');
+      expect(result.remainder).toEqual(['buckets']);
+    });
+
+    test('should cluster AWS service-specific subdomains', () => {
+      const url = new URL('https://s3.console.aws.amazon.com/s3/buckets/my-bucket');
+      const result = clusterFor(url);
+      expect(result.key).toBe('s3');
+      expect(result.remainder).toEqual(['buckets', 'my-bucket']);
+    });
+
     test('should cluster generic URLs by first path segment', () => {
       const url = new URL('https://example.com/products/item/123');
       const result = clusterFor(url);
