@@ -2,3 +2,8 @@ tabocalypse-reaper.zip
 node_modules
 dist
 web-ext-artifacts
+test-screenshots
+coverage
+*.log
+__image_snapshots__
+.DS_Store

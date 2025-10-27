@@ -110,3 +110,85 @@ npm run build
 
 Build artifacts are saved to `web-ext-artifacts/` (excluded from Git).
 
+## Testing
+
+This extension includes comprehensive automated testing:
+
+### Unit Tests
+
+Unit tests verify the core tab grouping and clustering logic:
+
+```bash
+npm run test:unit
+```
+
+Tests cover:
+- URL normalization (tracking parameter removal)
+- Cluster key generation (GitHub org/repo, AWS service, generic paths)
+- Tab model building with filtering and sorting
+- Pinned tab exclusion
+
+### End-to-End (E2E) Tests
+
+E2E tests use Selenium WebDriver to test the extension UI in a real Firefox browser:
+
+```bash
+npm run test:e2e
+```
+
+**Prerequisites for E2E tests:**
+- Firefox browser installed
+- For headless testing: `xvfb` (Linux) or set `HEADLESS=true`
+
+E2E tests cover:
+- Tab scenario setup (multi-window, pinned tabs, various URL types)
+- UI interactions (search, sorting, bulk close operations)
+- Cluster expansion and tab list rendering
+- Visual regression testing with screenshot comparison
+
+**Running E2E tests in headless mode:**
+```bash
+HEADLESS=true npm run test:e2e
+```
+
+**Running E2E tests with xvfb (Linux CI):**
+```bash
+xvfb-run -a npm run test:e2e
+```
+
+### Test Architecture
+
+The testing strategy addresses the limitation that **browser_action popup UI cannot be tested in headless mode**:
+
+1. **Core Logic Module (`core.js`)**: Shared logic between popup and E2E test page
+2. **E2E Test Page (`e2e.html` + `e2e.js`)**: Replica of popup UI that can be loaded as a normal tab
+3. **Background Script (`background.js`)**: Opens e2e.html when needed for tests
+4. **Selenium Tests**: Drive Firefox with extension loaded, interact with e2e page, capture screenshots
+
+### CI/CD Integration
+
+E2E tests run automatically in GitHub Actions on every pull request:
+
+- Tests execute in headless Firefox with xvfb
+- Screenshots are captured for visual verification
+- Test artifacts (screenshots, coverage) are uploaded to PR
+- PR comments show test results summary
+
+### Test Screenshots
+
+Screenshots from E2E tests are saved to `test-screenshots/` (excluded from Git). In CI, screenshots are uploaded as artifacts and available for download from the Actions tab.
+
+**Viewing CI test screenshots:**
+1. Navigate to the pull request page
+2. Click on "Checks" → "E2E Tests" workflow run
+3. Download the `e2e-test-screenshots` artifact
+4. Extract and view PNG files
+
+### Limitations and Known Issues
+
+- **Popup UI testing**: The extension's browser_action popup cannot be directly tested in headless mode. The E2E approach uses a separate `e2e.html` page as a workaround.
+- **Extension permissions**: Tests require Firefox to load the unsigned extension, which is configured automatically.
+- **Timing sensitivity**: E2E tests include sleep delays to handle async operations; timing may vary on slower systems.
+- **Visual regression**: Screenshot-based visual regression tests may have minor pixel differences across environments.
+
+

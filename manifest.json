@@ -12,6 +12,12 @@
     "default_title": "Tabocalypse Reaper",
     "default_popup": "popup.html"
   },
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "web_accessible_resources": [
+    "e2e.html"
+  ],
   "applications": {
     "gecko": {
       "id": "tabocalypse-reaper@example.com",
