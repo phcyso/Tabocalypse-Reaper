@@ -130,7 +130,7 @@ Tests cover:
 
 ### End-to-End (E2E) Tests
 
-⚠️ **Status: DISABLED IN CI** - E2E tests are currently disabled in GitHub Actions to save Actions minutes pending investigation.
+⚠️ **Status: DISABLED IN CI** - E2E tests are currently disabled in GitHub Actions to save Actions minutes pending investigation. The E2E workflow code is preserved in `.github/workflows/e2e-tests-disabled.yml` and can be re-enabled by changing the trigger from `workflow_dispatch` to `pull_request` or `push`.
 
 E2E tests use Selenium WebDriver to test the extension UI in a real Firefox browser and can be run locally:
 
@@ -167,6 +167,23 @@ export DISPLAY=:99
 Xvfb :99 -screen 0 1920x1080x24 &
 sleep 2
 FORCE_E2E=true npm run test:e2e
+```
+
+**Re-enabling E2E tests in CI:**
+To re-enable E2E tests in GitHub Actions, edit `.github/workflows/e2e-tests-disabled.yml` and change:
+```yaml
+on:
+  workflow_dispatch:  # Manual trigger only
+```
+to:
+```yaml
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
 ```
 
 ### Test Architecture
