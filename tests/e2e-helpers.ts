@@ -44,7 +44,8 @@ export async function createDriverWithExtension(): Promise<WebDriver> {
 
   try {
     // Install the extension as a temporary add-on
-    const extensionId = await driver.installAddon(EXTENSION_PATH, true);
+    // Using any cast because installAddon is a Firefox-specific method not in WebDriver types
+    const extensionId = await (driver as any).installAddon(EXTENSION_PATH, true);
     console.log(`Extension installed with ID: ${extensionId}`);
     
     // Give extension time to initialize

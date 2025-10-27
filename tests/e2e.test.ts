@@ -11,11 +11,7 @@ import {
   getHostCards,
 } from './e2e-helpers';
 
-// Skip E2E tests if SKIP_E2E environment variable is set
-const skipE2E = process.env.SKIP_E2E === 'true';
-const describeE2E = skipE2E ? describe.skip : describe;
-
-describeE2E('Tabocalypse Reaper E2E Tests', () => {
+describe('Tabocalypse Reaper E2E Tests', () => {
   let driver: WebDriver;
 
   beforeAll(async () => {

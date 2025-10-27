@@ -34,15 +34,20 @@ jobs:
           sudo apt-get install -y firefox xvfb
 
       - name: Run unit tests
+        id: unit-tests
         run: npm run test:unit
 
+      - name: Start Xvfb
+        run: |
+          Xvfb :99 -screen 0 1920x1080x24 &
+          sleep 2
+
       - name: Run E2E tests with xvfb
+        id: e2e-tests
         run: |
           export DISPLAY=:99
           export HEADLESS=true
-          export SKIP_E2E=true
-          npm run test:e2e || echo "E2E tests skipped - requires Firefox extension context"
-        continue-on-error: true
+          npm run test:e2e
 
       - name: Upload test screenshots
         if: always()
@@ -70,13 +75,29 @@ jobs:
             const fs = require('fs');
             const path = require('path');
             
-            let comment = '## 🧪 E2E Test Results\n\n';
+            let comment = '## 🧪 Test Results\n\n';
+            
+            // Check test results from previous steps
+            const testsPassed = '${{ steps.unit-tests.outcome }}' === 'success' && '${{ steps.e2e-tests.outcome }}' === 'success';
+            
+            if (testsPassed) {
+              comment += '✅ All tests passed\n\n';
+            } else {
+              comment += '❌ Some tests failed\n\n';
+              if ('${{ steps.unit-tests.outcome }}' !== 'success') {
+                comment += '- ❌ Unit tests failed\n';
+              }
+              if ('${{ steps.e2e-tests.outcome }}' !== 'success') {
+                comment += '- ❌ E2E tests failed\n';
+              }
+              comment += '\n';
+            }
             
             // Check if screenshots exist
             const screenshotsDir = 'test-screenshots';
             if (fs.existsSync(screenshotsDir)) {
               const files = fs.readdirSync(screenshotsDir);
-              comment += `✅ Generated ${files.length} screenshot(s)\n\n`;
+              comment += `📸 Generated ${files.length} screenshot(s)\n\n`;
               comment += 'Download the test artifacts to view screenshots.\n';
             } else {
               comment += '⚠️ No screenshots generated\n';
