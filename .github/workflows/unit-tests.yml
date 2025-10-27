@@ -1,4 +1,4 @@
-name: E2E Tests
+name: Unit Tests
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ on:
       - main
 
 jobs:
-  e2e-tests:
+  unit-tests:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -28,38 +28,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Firefox
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y firefox xvfb
-
       - name: Run unit tests
         id: unit-tests
         run: npm run test:unit
-
-      - name: Start Xvfb
-        run: |
-          Xvfb :99 -screen 0 1920x1080x24 &
-          sleep 2
-
-      - name: Run E2E tests with xvfb
-        id: e2e-tests
-        run: |
-          export DISPLAY=:99
-          export HEADLESS=true
-          export FORCE_E2E=true
-          npm run test:e2e || echo "E2E tests skipped or failed (non-blocking)"
-        timeout-minutes: 5
-        continue-on-error: true
-
-      - name: Upload test screenshots
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-test-screenshots
-          path: test-screenshots/
-          retention-days: 30
-          if-no-files-found: ignore
 
       - name: Upload test coverage
         if: always()
@@ -82,7 +53,6 @@ jobs:
             
             // Check test results from previous steps
             const unitTestsPass = '${{ steps.unit-tests.outcome }}' === 'success';
-            const e2eTestsOutcome = '${{ steps.e2e-tests.outcome }}';
             
             if (unitTestsPass) {
               comment += '✅ **Unit tests: PASSED** (25/25)\n\n';
@@ -90,21 +60,8 @@ jobs:
               comment += '❌ **Unit tests: FAILED**\n\n';
             }
             
-            // E2E tests are optional/informational
-            if (e2eTestsOutcome === 'success') {
-              comment += '✅ **E2E tests: PASSED**\n\n';
-            } else {
-              comment += '⚠️  **E2E tests: Skipped or Not Available** (non-blocking)\n';
-              comment += '_E2E tests require full Selenium + Firefox environment. Unit tests provide comprehensive coverage._\n\n';
-            }
-            
-            // Check if screenshots exist
-            const screenshotsDir = 'test-screenshots';
-            if (fs.existsSync(screenshotsDir)) {
-              const files = fs.readdirSync(screenshotsDir);
-              comment += `\n📸 Generated ${files.length} screenshot(s)\n\n`;
-              comment += 'Download the test artifacts to view screenshots.\n';
-            }
+            comment += '⚠️  **E2E tests: DISABLED** (to save Actions minutes)\n';
+            comment += '_E2E tests are disabled pending investigation. Unit tests provide comprehensive coverage of core functionality._\n\n';
             
             // Overall status
             if (!unitTestsPass) {

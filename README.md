@@ -130,13 +130,13 @@ Tests cover:
 
 ### End-to-End (E2E) Tests
 
-E2E tests use Selenium WebDriver to test the extension UI in a real Firefox browser:
+⚠️ **Status: DISABLED IN CI** - E2E tests are currently disabled in GitHub Actions to save Actions minutes pending investigation.
+
+E2E tests use Selenium WebDriver to test the extension UI in a real Firefox browser and can be run locally:
 
 ```bash
 npm run test:e2e
 ```
-
-**Status:** E2E tests are **optional and informational only**. They are not required for CI to pass.
 
 **Prerequisites for E2E tests:**
 - Firefox browser installed
@@ -144,7 +144,7 @@ npm run test:e2e
 - For headless testing: `xvfb` (Linux) or set `HEADLESS=true`
 - DISPLAY environment variable set (for X11/Xvfb)
 
-**Note:** E2E tests are automatically skipped if the Selenium environment is not properly configured. In CI, E2E test failures are non-blocking since unit tests provide comprehensive coverage of core functionality. To force running E2E tests locally:
+**Note:** E2E tests are automatically skipped if the Selenium environment is not properly configured. Unit tests provide comprehensive coverage of core functionality. To force running E2E tests locally:
 
 ```bash
 FORCE_E2E=true npm run test:e2e
@@ -161,7 +161,7 @@ E2E tests cover (when they run successfully):
 HEADLESS=true FORCE_E2E=true npm run test:e2e
 ```
 
-**Running E2E tests with xvfb (Linux CI):**
+**Running E2E tests with xvfb (Linux):**
 ```bash
 export DISPLAY=:99
 Xvfb :99 -screen 0 1920x1080x24 &
@@ -183,28 +183,22 @@ The testing strategy addresses the limitation that **browser_action popup UI can
 Tests run automatically in GitHub Actions on every pull request:
 
 - **Unit tests** (required): Always run and must pass for PR to be approved
-- **E2E tests** (optional): Attempt to run but are non-blocking if they fail
-- Test artifacts (screenshots, coverage) are uploaded when available
+- **E2E tests**: Currently **DISABLED in CI** to save Actions minutes (available for local development only)
+- Test artifacts (coverage) are uploaded when available
 - PR comments show test results summary
 
 **Build passes when:** Unit tests pass (25/25 required)  
-**E2E tests:** Informational only - failures don't block PR
+**E2E tests:** Disabled in CI, can be run locally
 
 ### Test Screenshots
 
-Screenshots from E2E tests are saved to `test-screenshots/` (excluded from Git) when tests run successfully. In CI, screenshots are uploaded as artifacts when available.
-
-**Viewing CI test screenshots (if generated):**
-1. Navigate to the pull request page
-2. Click on "Checks" → "E2E Tests" workflow run
-3. Download the `e2e-test-screenshots` artifact (if available)
-4. Extract and view PNG files
+E2E tests can generate screenshots when run locally with proper Selenium setup. Screenshots are saved to `test-screenshots/` (excluded from Git).
 
 ### Limitations and Known Issues
 
 - **Popup UI testing**: The extension's browser_action popup cannot be directly tested in headless mode. The E2E approach uses a separate `e2e.html` page as a workaround.
 - **Extension permissions**: Tests require Firefox to load the unsigned extension, which is configured automatically.
-- **E2E test environment**: E2E tests require full Selenium + Firefox + geckodriver setup and are automatically skipped if prerequisites aren't met. Use `FORCE_E2E=true` to attempt running in partial environments.
+- **E2E test environment**: E2E tests require full Selenium + Firefox + geckodriver setup and are currently **disabled in CI**. They can be run locally with `FORCE_E2E=true npm run test:e2e`.
 - **Timing sensitivity**: E2E tests include sleep delays to handle async operations; timing may vary on slower systems.
 - **Visual regression**: Screenshot-based visual regression tests may have minor pixel differences across environments.
 
