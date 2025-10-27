@@ -22,6 +22,10 @@ export async function createDriverWithExtension(): Promise<WebDriver> {
     fs.mkdirSync(SCREENSHOTS_DIR, { recursive: true });
   }
 
+  console.log('Creating Firefox driver with extension...');
+  console.log(`Extension path: ${EXTENSION_PATH}`);
+  console.log(`Headless mode: ${process.env.CI || process.env.HEADLESS ? 'true' : 'false'}`);
+
   const options = new firefox.Options();
   
   // Headless mode for CI
@@ -37,19 +41,24 @@ export async function createDriverWithExtension(): Promise<WebDriver> {
   options.setPreference('extensions.autoDisableScopes', 0);
   options.setPreference('extensions.enabledScopes', 15);
 
+  console.log('Building WebDriver...');
   const driver = await new Builder()
     .forBrowser('firefox')
     .setFirefoxOptions(options)
     .build();
 
+  console.log('WebDriver created successfully');
+
   try {
+    console.log('Installing extension...');
     // Install the extension as a temporary add-on
     // Using any cast because installAddon is a Firefox-specific method not in WebDriver types
     const extensionId = await (driver as any).installAddon(EXTENSION_PATH, true);
-    console.log(`Extension installed with ID: ${extensionId}`);
+    console.log(`✓ Extension installed with ID: ${extensionId}`);
     
     // Give extension time to initialize
     await driver.sleep(2000);
+    console.log('Extension initialized');
   } catch (error) {
     console.error('Failed to install extension:', error);
     await driver.quit();

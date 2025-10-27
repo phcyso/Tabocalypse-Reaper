@@ -47,7 +47,9 @@ jobs:
         run: |
           export DISPLAY=:99
           export HEADLESS=true
+          export FORCE_E2E=true
           npm run test:e2e
+        timeout-minutes: 5
 
       - name: Upload test screenshots
         if: always()

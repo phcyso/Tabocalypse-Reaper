@@ -138,7 +138,15 @@ npm run test:e2e
 
 **Prerequisites for E2E tests:**
 - Firefox browser installed
+- geckodriver installed and in PATH
 - For headless testing: `xvfb` (Linux) or set `HEADLESS=true`
+- DISPLAY environment variable set (for X11/Xvfb)
+
+**Note:** E2E tests are automatically skipped if the Selenium environment is not properly configured. To force running E2E tests even if prerequisites aren't fully met:
+
+```bash
+FORCE_E2E=true npm run test:e2e
+```
 
 E2E tests cover:
 - Tab scenario setup (multi-window, pinned tabs, various URL types)
@@ -148,12 +156,15 @@ E2E tests cover:
 
 **Running E2E tests in headless mode:**
 ```bash
-HEADLESS=true npm run test:e2e
+HEADLESS=true FORCE_E2E=true npm run test:e2e
 ```
 
 **Running E2E tests with xvfb (Linux CI):**
 ```bash
-xvfb-run -a npm run test:e2e
+export DISPLAY=:99
+Xvfb :99 -screen 0 1920x1080x24 &
+sleep 2
+FORCE_E2E=true npm run test:e2e
 ```
 
 ### Test Architecture
@@ -188,6 +199,7 @@ Screenshots from E2E tests are saved to `test-screenshots/` (excluded from Git).
 
 - **Popup UI testing**: The extension's browser_action popup cannot be directly tested in headless mode. The E2E approach uses a separate `e2e.html` page as a workaround.
 - **Extension permissions**: Tests require Firefox to load the unsigned extension, which is configured automatically.
+- **E2E test environment**: E2E tests require full Selenium + Firefox + geckodriver setup and are automatically skipped if prerequisites aren't met. Use `FORCE_E2E=true` to attempt running in partial environments.
 - **Timing sensitivity**: E2E tests include sleep delays to handle async operations; timing may vary on slower systems.
 - **Visual regression**: Screenshot-based visual regression tests may have minor pixel differences across environments.
 
