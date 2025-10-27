@@ -5,7 +5,9 @@
   "main": "popup.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "web-ext": "web-ext"
+    "web-ext": "web-ext",
+    "lint": "web-ext lint",
+    "build": "web-ext build --overwrite-dest"
   },
   "repository": {
     "type": "git",

@@ -1,0 +1,99 @@
+name: Release Build
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint extension
+        run: npx web-ext lint
+
+      - name: Get current version
+        id: get_version
+        run: |
+          VERSION=$(jq -r '.version' manifest.json)
+          echo "current_version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Bump patch version
+        id: bump_version
+        run: |
+          CURRENT_VERSION="${{ steps.get_version.outputs.current_version }}"
+          IFS='.' read -r -a VERSION_PARTS <<< "$CURRENT_VERSION"
+
+          # Validate version format
+          if [ ${#VERSION_PARTS[@]} -ne 3 ]; then
+            echo "Error: Invalid version format '$CURRENT_VERSION'. Expected X.Y.Z"
+            exit 1
+          fi
+
+          MAJOR="${VERSION_PARTS[0]}"
+          MINOR="${VERSION_PARTS[1]}"
+          PATCH="${VERSION_PARTS[2]}"
+
+          # Validate each component is a number
+          if ! [[ "$MAJOR" =~ ^[0-9]+$ ]] || \
+             ! [[ "$MINOR" =~ ^[0-9]+$ ]] || \
+             ! [[ "$PATCH" =~ ^[0-9]+$ ]]; then
+            echo "Error: Version components must be numeric"
+            exit 1
+          fi
+
+          NEW_PATCH=$((PATCH + 1))
+          NEW_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+          # Update manifest.json using jq
+          jq --arg version "$NEW_VERSION" '.version = $version' \
+            manifest.json > manifest.json.tmp && \
+            mv manifest.json.tmp manifest.json
+
+          echo "Bumped version from $CURRENT_VERSION to $NEW_VERSION"
+
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email \
+            "github-actions[bot]@users.noreply.github.com"
+          git add manifest.json
+          git commit -m \
+            "chore: bump version to ${{ steps.bump_version.outputs.new_version }}"
+          git push
+
+      - name: Build extension
+        run: npx web-ext build --overwrite-dest
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.bump_version.outputs.new_version }}
+          name: Release v${{ steps.bump_version.outputs.new_version }}
+          body: |
+            Automated release v${{ steps.bump_version.outputs.new_version }}
+
+            Download the extension package below.
+          files: web-ext-artifacts/*.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
