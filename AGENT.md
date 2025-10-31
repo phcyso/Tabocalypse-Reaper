@@ -31,6 +31,12 @@ Host count = unique tab IDs across its clusters. Cluster count = `tabs.length`.
 - Bulk close via `browser.tabs.remove([...ids])` (host or cluster). Confirm if ≥10 (`CONFIRM_THRESHOLD`).
 - Sort hosts/clusters by count (default) or alpha; tabs inside cluster sorted by title.
 
+## Icon Logic
+- **Host icons**: Display favicon from first available tab in the host (searches through clusters until a favicon is found). Falls back to empty/placeholder if no favicon available.
+- **Cluster icons**: Display favicon from first tab in the cluster. Falls back to empty/placeholder if no favicon available.
+- **Tab icons**: Display individual tab favicon. Already implemented via `.ico` class.
+- All icons use `.ico` class for consistent styling (14-16px, rounded corners, background fallback).
+
 ## Theme Adaptation
 `applyThemeFromBrowser()` maps `theme.colors` into CSS vars (`--card`, `--text`, `--bg`, `--accent`, etc.). Fallback: native `prefers-color-scheme` defined in `popup.css`.
 

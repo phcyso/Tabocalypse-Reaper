@@ -105,10 +105,21 @@ function render(root) {
     const twisty = frag.querySelector(".twisty");
     const closeBtn = frag.querySelector(".close");
     const body = frag.querySelector(".hostBody");
+    const ico = frag.querySelector(".hostIco");
 
     name.textContent = h.name;
     badge.textContent = h.count;
     body.hidden = true;
+
+    // Set host icon: use first available favicon from any tab in the host
+    let hostFavicon = "";
+    for (const [, cluster] of h.children) {
+      if (cluster.tabs.length > 0 && cluster.tabs[0].favIconUrl) {
+        hostFavicon = cluster.tabs[0].favIconUrl;
+        break;
+      }
+    }
+    if (hostFavicon) ico.src = hostFavicon;
 
     closeBtn.addEventListener("click", async (e)=>{
       e.stopPropagation();
@@ -134,9 +145,15 @@ function render(root) {
       const ctwisty = cfrag.querySelector(".twisty");
       const cclose = cfrag.querySelector(".close");
       const cbody = cfrag.querySelector(".clusterBody");
+      const cico = cfrag.querySelector(".clusterIco");
       cname.textContent = c.name;
       cbadge.textContent = c.count;
       cbody.hidden = true;
+
+      // Set cluster icon: use first tab favicon from cluster
+      if (c.tabs.length > 0 && c.tabs[0].favIconUrl) {
+        cico.src = c.tabs[0].favIconUrl;
+      }
 
       cclose.addEventListener("click", async (e)=>{
         e.stopPropagation();
