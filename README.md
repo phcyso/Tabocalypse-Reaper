@@ -32,3 +32,81 @@ Logo: `logo.svg` (purple gradient, skull+scythe).
 2) **Load Temporary Add-on…**  
 3) Select `manifest.json`.
 
+## CI/CD Pipeline
+
+### Overview
+This repository uses GitHub Actions to automate testing, building, and releasing the Firefox extension.
+
+### Workflows
+
+#### Pull Request Builds (`.github/workflows/pr-build.yml`)
+Triggered on **all pull requests** to the `main` branch:
+1. Lints the extension using `web-ext lint`
+2. Builds an **unsigned** extension package
+3. Uploads the build artifact to the PR
+
+**Retrieving PR artifacts:**
+1. Navigate to the pull request page
+2. Scroll to the bottom and look for the "Checks" section
+3. Click on "PR Build" workflow run
+4. Download the `firefox-extension-unsigned` artifact from the "Artifacts" section
+5. Extract the `.zip` file and install it temporarily in Firefox (see Install instructions above)
+
+#### Release Builds (`.github/workflows/release.yml`)
+Triggered on **pushes to the `main` branch**:
+1. Lints the extension using `web-ext lint`
+2. Automatically **bumps the patch version** in `manifest.json` (e.g., 0.4.0 → 0.4.1)
+3. Commits the version bump back to the repository
+4. Builds the extension package
+5. Creates a GitHub Release with the version tag and attaches the build artifact
+
+**Note:** Releases are **private** by default (visible only to repository collaborators).
+
+### Version Management
+
+#### Automated Patch Bumps
+Patch versions (e.g., 0.4.0 → 0.4.1) are **automatically incremented** on every merge to `main`. This follows semantic versioning conventions where patch versions represent bug fixes and minor changes.
+
+#### Manual Minor/Major Version Bumps
+For **minor** (e.g., 0.4.0 → 0.5.0) or **major** (e.g., 0.4.0 → 1.0.0) version bumps:
+
+1. **Update `manifest.json` manually:**
+   ```json
+   "version": "0.5.0"
+   ```
+
+2. **Commit and push:**
+   ```bash
+   git add manifest.json
+   git commit -m "chore: bump version to 0.5.0"
+   git push
+   ```
+
+3. The next merge to `main` will continue with patch increments from the new base version.
+
+**Versioning Guidelines:**
+- **Patch** (0.4.0 → 0.4.1): Bug fixes, minor tweaks, no new features
+- **Minor** (0.4.0 → 0.5.0): New features, backwards-compatible changes
+- **Major** (0.4.0 → 1.0.0): Breaking changes, significant rewrites
+
+See [Firefox Extension Versioning Guidelines](https://extensionworkshop.com/documentation/publish/updating-your-extension/) for more details.
+
+### Local Development
+
+**Install dependencies:**
+```bash
+npm install
+```
+
+**Lint the extension:**
+```bash
+npm run lint
+```
+
+**Build the extension:**
+```bash
+npm run build
+```
+
+Build artifacts are saved to `web-ext-artifacts/` (excluded from Git).
+
