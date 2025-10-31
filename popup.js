@@ -100,6 +100,7 @@ function render(root) {
 
   for (const h of hosts) {
     const frag = hostTpl.content.cloneNode(true);
+    const header = frag.querySelector(".hostHeader");
     const name = frag.querySelector(".hostName");
     const badge = frag.querySelector(".badge");
     const twisty = frag.querySelector(".twisty");
@@ -110,6 +111,17 @@ function render(root) {
     name.textContent = h.name;
     badge.textContent = h.count;
     body.hidden = true;
+    const syncHostState = () => {
+      const expanded = !body.hidden;
+      twisty.textContent = expanded ? "▾" : "▸";
+      header.setAttribute("aria-expanded", expanded ? "true" : "false");
+    };
+    syncHostState();
+
+    const toggleHostBody = () => {
+      body.hidden = !body.hidden;
+      syncHostState();
+    };
 
     // Set host icon: use first available favicon from any tab in the host
     let hostFavicon = "";
@@ -131,15 +143,22 @@ function render(root) {
       await refresh();
     });
 
-    twisty.addEventListener("click", ()=>{
-      body.hidden = !body.hidden;
-      twisty.textContent = body.hidden ? "▸" : "▾";
+    header.addEventListener("click", ()=>{
+      toggleHostBody();
+    });
+
+    header.addEventListener("keydown", (e)=>{
+      if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+        e.preventDefault();
+        toggleHostBody();
+      }
     });
 
     let clusters = [...h.children.values()];
     clusters.sort((a,b)=> sortMode==="alpha" ? a.name.localeCompare(b.name) : b.count-a.count);
     for (const c of clusters) {
       const cfrag = clusterTpl.content.cloneNode(true);
+      const cheader = cfrag.querySelector(".clusterHeader");
       const cname = cfrag.querySelector(".clusterName");
       const cbadge = cfrag.querySelector(".badge");
       const ctwisty = cfrag.querySelector(".twisty");
@@ -149,6 +168,17 @@ function render(root) {
       cname.textContent = c.name;
       cbadge.textContent = c.count;
       cbody.hidden = true;
+      const syncClusterState = () => {
+        const expanded = !cbody.hidden;
+        ctwisty.textContent = expanded ? "▾" : "▸";
+        cheader.setAttribute("aria-expanded", expanded ? "true" : "false");
+      };
+      syncClusterState();
+
+      const toggleClusterBody = () => {
+        cbody.hidden = !cbody.hidden;
+        syncClusterState();
+      };
 
       // Set cluster icon: use first tab favicon from cluster
       if (c.tabs.length > 0 && c.tabs[0].favIconUrl) {
@@ -165,9 +195,15 @@ function render(root) {
         await refresh();
       });
 
-      ctwisty.addEventListener("click", ()=>{
-        cbody.hidden = !cbody.hidden;
-        ctwisty.textContent = cbody.hidden ? "▸" : "▾";
+      cheader.addEventListener("click", ()=>{
+        toggleClusterBody();
+      });
+
+      cheader.addEventListener("keydown", (e)=>{
+        if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+          e.preventDefault();
+          toggleClusterBody();
+        }
       });
 
       const list = document.createElement("div");
