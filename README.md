@@ -28,9 +28,10 @@ Logo: `logo.svg` (purple gradient, skull+scythe).
 - MDN `img-src` — CSP directive for favicons. https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/img-src
 
 ## Install (Temporary)
-1) Open `about:debugging#/runtime/this-firefox`  
-2) **Load Temporary Add-on…**  
-3) Select `manifest.json`.
+0) Build the compiled extension assets: `npm run prepare:dist`
+1) Open `about:debugging#/runtime/this-firefox`
+2) **Load Temporary Add-on…**
+3) Select `dist/manifest.json`.
 
 ## CI/CD Pipeline
 
@@ -98,15 +99,25 @@ See [Firefox Extension Versioning Guidelines](https://extensionworkshop.com/docu
 npm install
 ```
 
-**Lint the extension:**
+**Type-check + compile once:**
+```bash
+npm run prepare:dist
+```
+
+**Run the live reloading dev loop:**
+```bash
+npm run dev
+```
+
+**Lint the packaged extension:**
 ```bash
 npm run lint
 ```
 
-**Build the extension:**
+**Build the signed zip:**
 ```bash
 npm run build
 ```
 
-Build artifacts are saved to `web-ext-artifacts/` (excluded from Git).
+Build artifacts are saved to `web-ext-artifacts/` (excluded from Git), while the compiled extension lives in `dist/`.
 
