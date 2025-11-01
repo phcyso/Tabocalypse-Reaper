@@ -28,10 +28,10 @@ jobs:
         run: npm ci
 
       - name: Lint extension
-        run: npx web-ext lint
+        run: npm run lint
 
       - name: Build extension
-        run: npx web-ext build --overwrite-dest
+        run: npm run build
 
       - name: Upload artifact
         id: upload_artifact

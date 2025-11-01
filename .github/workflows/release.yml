@@ -27,12 +27,12 @@ jobs:
         run: npm ci
 
       - name: Lint extension
-        run: npx web-ext lint
+        run: npm run lint
 
       - name: Get current version
         id: get_version
         run: |
-          VERSION=$(jq -r '.version' manifest.json)
+          VERSION=$(jq -r '.version' src/manifest.json)
           echo "current_version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Bump patch version
@@ -65,8 +65,8 @@ jobs:
 
           # Update manifest.json using jq
           jq --arg version "$NEW_VERSION" '.version = $version' \
-            manifest.json > manifest.json.tmp && \
-            mv manifest.json.tmp manifest.json
+            src/manifest.json > src/manifest.json.tmp && \
+            mv src/manifest.json.tmp src/manifest.json
 
           echo "Bumped version from $CURRENT_VERSION to $NEW_VERSION"
 
@@ -75,13 +75,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email \
             "github-actions[bot]@users.noreply.github.com"
-          git add manifest.json
+          git add src/manifest.json
           git commit -m \
             "chore: bump version to ${{ steps.bump_version.outputs.new_version }}"
           git push
 
       - name: Build extension
-        run: npx web-ext build --overwrite-dest
+        run: npm run build
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
