@@ -4,10 +4,10 @@
   "description": "## Approach validation & assumptions - **Shallow hierarchy (Host → Cluster) is faster** than deep trees for scanning/closing; aligns with Sidebery/Tab Manager patterns. (Refs below) - **Cluster keys**: first path segment; GitHub = org/repo; AWS = first segment. Good balance of meaning vs. complexity. - **Counts**: bottom‑up unique IDs; cluster = length; host = union of clusters. - **Favicons**: enable via CSP `img-src https: data: moz-extension:`; significantly improves scan speed. - **Theme adaptation**: try `browser.theme.getCurrent()`; fallback `prefers-color-scheme`. - **Bulk close**: single `tabs.remove([...])` per group.",
   "main": "dist/popup.js",
   "scripts": {
-    "clean": "rimraf dist",
+    "clean": "node scripts/clean.mjs",
     "typecheck": "tsc --noEmit",
     "build:ts": "tsc --project tsconfig.json",
-    "copy:assets": "cpx \"src/**/*.{html,css,svg,json}\" dist",
+    "copy:assets": "node scripts/copy-assets.mjs",
     "prepare": "npm run clean && npm run build:ts && npm run copy:assets",
     "build": "npm run prepare && web-ext build --source-dir dist --overwrite-dest",
     "lint": "npm run typecheck && npm run test && npm run prepare && web-ext lint --source-dir dist",
@@ -15,7 +15,7 @@
     "test:watch": "vitest watch",
     "dev": "npm run prepare && npm-run-all --parallel watch:ts watch:assets web-ext:run",
     "watch:ts": "tsc --project tsconfig.json --watch --preserveWatchOutput",
-    "watch:assets": "cpx \"src/**/*.{html,css,svg,json}\" dist --watch",
+    "watch:assets": "node scripts/watch-assets.mjs",
     "web-ext:run": "web-ext run --source-dir dist --watch-file dist"
   },
   "repository": {
@@ -31,10 +31,8 @@
   "devDependencies": {
     "@types/firefox-webext-browser": "^120.0.4",
     "@types/node": "^24.9.2",
-    "cpx": "^1.5.0",
     "jsdom": "^27.1.0",
     "npm-run-all": "^4.1.5",
-    "rimraf": "^5.0.5",
     "tslib": "^2.6.2",
     "typescript": "^5.4.5",
     "vitest": "^4.0.6",
