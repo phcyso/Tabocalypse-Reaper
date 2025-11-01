@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Tabocalypse Reaper",
-  "version": "0.4.10",
+  "version": "0.4.11",
   "description": "Funny chaos-controller for tabs. Groups by host → cluster, shows icons, and lets you reap entire groups.",
   "permissions": [
     "tabs",
