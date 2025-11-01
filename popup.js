@@ -95,6 +95,33 @@ function render(root) {
   const tabTpl = /** @type {HTMLTemplateElement} */ ($$("#tabTemplate"));
   const sortMode = $$("#sort").value;
 
+  const formatCount = (count) => `${count} tab${count === 1 ? "" : "s"}`;
+  const buildTabList = (tabs) => {
+    const list = document.createElement("div");
+    for (const t of tabs) {
+      const tfrag = tabTpl.content.cloneNode(true);
+      const x = tfrag.querySelector(".x");
+      const a = tfrag.querySelector(".title");
+      const ico = tfrag.querySelector(".ico");
+      const path = tfrag.querySelector(".path");
+      a.textContent = t.title;
+      a.href = t.url;
+      path.textContent = t.subpath || "";
+      if (t.favIconUrl) ico.src = t.favIconUrl;
+      x.addEventListener("click", async (e)=>{
+        e.stopPropagation();
+        try { await browser.tabs.remove(t.id); } catch {}
+        await refresh();
+      });
+      a.addEventListener("click", (e)=>{
+        e.preventDefault();
+        browser.tabs.update(t.id, { active: true });
+      });
+      list.appendChild(tfrag);
+    }
+    return list;
+  };
+
   let hosts = [...root.children.values()];
   hosts.sort((a,b)=> sortMode==="alpha" ? a.name.localeCompare(b.name) : b.count-a.count);
 
@@ -109,9 +136,14 @@ function render(root) {
     const ico = frag.querySelector(".hostIco");
 
     name.textContent = h.name;
-    badge.textContent = h.count;
-    body.hidden = true;
-    header.setAttribute("aria-expanded", "false");
+    badge.textContent = formatCount(h.count);
+    const hostHasSingleCluster = h.children.size === 1;
+    const hostCollapsible = h.count > 1;
+    const hostStartsExpanded = hostHasSingleCluster || !hostCollapsible;
+
+    body.hidden = !hostStartsExpanded;
+    header.setAttribute("aria-expanded", hostStartsExpanded ? "true" : "false");
+    twisty.textContent = hostStartsExpanded ? "▾" : "▸";
 
     // Set host icon: use first available favicon from any tab in the host
     let hostFavicon = "";
@@ -123,12 +155,6 @@ function render(root) {
     }
     if (hostFavicon) ico.src = hostFavicon;
 
-    const toggleHost = () => {
-      body.hidden = !body.hidden;
-      twisty.textContent = body.hidden ? "▸" : "▾";
-      header.setAttribute("aria-expanded", body.hidden ? "false" : "true");
-    };
-
     closeBtn.addEventListener("click", async (e)=>{
       e.stopPropagation();
       const idsArr = Array.from(h.ids);
@@ -139,23 +165,185 @@ function render(root) {
       await refresh();
     });
 
-    header.addEventListener("click", (e)=>{
-      if (e.target.closest && e.target.closest(".close")) return;
-      toggleHost();
-    });
-
-    header.addEventListener("keydown", (e)=>{
-      if (e.target !== header) return;
-      if (e.key === "Enter" || e.key === " " || e.key === "Spacebar" || e.key === "Space") {
-        e.preventDefault();
+    if (hostCollapsible) {
+      const toggleHost = () => {
+        body.hidden = !body.hidden;
+        twisty.textContent = body.hidden ? "▸" : "▾";
+        header.setAttribute("aria-expanded", body.hidden ? "false" : "true");
+      };
+      header.addEventListener("click", (e)=>{
+        if (e.target.closest && e.target.closest(".close")) return;
         toggleHost();
-      }
-    });
+      });
+
+      header.addEventListener("keydown", (e)=>{
+        if (e.target !== header) return;
+        if (e.key === "Enter" || e.key === " " || e.key === "Spacebar" || e.key === "Space") {
+          e.preventDefault();
+          toggleHost();
+        }
+      });
+    } else {
+      body.hidden = false;
+      header.setAttribute("aria-expanded", "true");
+      header.classList.add("isStatic");
+      twisty.classList.add("twistyHidden");
+      twisty.textContent = "▾";
+      header.removeAttribute("role");
+      header.removeAttribute("tabindex");
+      header.setAttribute("aria-disabled", "true");
+    }
 
     let clusters = [...h.children.values()];
     clusters.sort((a,b)=> sortMode==="alpha" ? a.name.localeCompare(b.name) : b.count-a.count);
     for (const c of clusters) {
+      const sortedTabs = c.tabs.slice().sort((a,b)=> (a.title||"").localeCompare(b.title||""));
+      const clusterSingleTab = sortedTabs.length === 1;
+
+      if (hostHasSingleCluster) {
+        if (clusterSingleTab) {
+          const inlineFrag = clusterTpl.content.cloneNode(true);
+          const inlineWrapper = inlineFrag.querySelector(".cluster");
+          const inlineHeader = inlineFrag.querySelector(".clusterHeader");
+          const inlineName = inlineFrag.querySelector(".clusterName");
+          const inlineBadge = inlineFrag.querySelector(".badge");
+          const inlineTwisty = inlineFrag.querySelector(".twisty");
+          const inlineClose = inlineFrag.querySelector(".close");
+          const inlineBody = inlineFrag.querySelector(".clusterBody");
+          const inlineIco = inlineFrag.querySelector(".clusterIco");
+
+          inlineWrapper.classList.add("clusterInline", "clusterSolo");
+          inlineHeader.classList.add("isStatic", "clusterInlineHeader");
+          inlineHeader.removeAttribute("role");
+          inlineHeader.removeAttribute("tabindex");
+          inlineHeader.setAttribute("aria-disabled", "true");
+          inlineHeader.setAttribute("aria-expanded", "true");
+          inlineTwisty.classList.add("twistyHidden");
+          inlineTwisty.textContent = "▾";
+          inlineBody.hidden = false;
+          inlineBody.classList.add("clusterSoloBody");
+
+          inlineName.textContent = c.name;
+          inlineBadge.textContent = formatCount(c.count);
+          if (sortedTabs[0].favIconUrl) {
+            inlineIco.src = sortedTabs[0].favIconUrl;
+          }
+
+          const showInlineHeader = c.name && c.name !== "/";
+          if (!showInlineHeader) {
+            inlineHeader.remove();
+          }
+
+          inlineClose.addEventListener("click", async (e)=>{
+            e.stopPropagation();
+            const idsArr = Array.from(c.ids);
+            if (idsArr.length >= CONFIRM_THRESHOLD) {
+              if (!confirm(`Reap ${idsArr.length} tabs under “${h.name} / ${c.name}”?`)) return;
+            }
+            try { await browser.tabs.remove(idsArr); } catch(e){ console.error(e); }
+            await refresh();
+          });
+
+          const list = buildTabList(sortedTabs);
+          inlineBody.appendChild(list);
+          body.appendChild(inlineFrag);
+          continue;
+        }
+
+        const soloFrag = clusterTpl.content.cloneNode(true);
+        const soloWrapper = soloFrag.querySelector(".cluster");
+        const soloHeader = soloFrag.querySelector(".clusterHeader");
+        const soloName = soloFrag.querySelector(".clusterName");
+        const soloBadge = soloFrag.querySelector(".badge");
+        const soloTwisty = soloFrag.querySelector(".twisty");
+        const soloClose = soloFrag.querySelector(".close");
+        const soloBody = soloFrag.querySelector(".clusterBody");
+        const soloIco = soloFrag.querySelector(".clusterIco");
+
+        soloWrapper.classList.add("clusterSolo");
+        soloBody.hidden = false;
+        soloBody.classList.add("clusterSoloBody");
+        soloHeader.classList.add("clusterSoloHeader", "isStatic");
+        soloHeader.removeAttribute("role");
+        soloHeader.removeAttribute("tabindex");
+        soloHeader.removeAttribute("aria-expanded");
+        soloHeader.setAttribute("aria-disabled", "true");
+
+        if (soloTwisty) soloTwisty.remove();
+
+        if (soloIco && sortedTabs[0] && sortedTabs[0].favIconUrl) {
+          soloIco.src = sortedTabs[0].favIconUrl;
+        }
+
+        const showSoloHeader = c.name && c.name !== "/";
+        if (showSoloHeader) {
+          soloName.textContent = c.name;
+          soloBadge.textContent = formatCount(c.count);
+        } else {
+          soloHeader.remove();
+        }
+
+        soloClose.addEventListener("click", async (e)=>{
+          e.stopPropagation();
+          const idsArr = Array.from(c.ids);
+          if (idsArr.length >= CONFIRM_THRESHOLD) {
+            if (!confirm(`Reap ${idsArr.length} tabs under “${h.name} / ${c.name}”?`)) return;
+          }
+          try { await browser.tabs.remove(idsArr); } catch(e){ console.error(e); }
+          await refresh();
+        });
+
+        const list = buildTabList(sortedTabs);
+        soloBody.appendChild(list);
+        body.appendChild(soloFrag);
+        continue;
+      }
+
+      if (clusterSingleTab) {
+        const inlineFrag = clusterTpl.content.cloneNode(true);
+        const inlineWrapper = inlineFrag.querySelector(".cluster");
+        const inlineHeader = inlineFrag.querySelector(".clusterHeader");
+        const inlineName = inlineFrag.querySelector(".clusterName");
+        const inlineBadge = inlineFrag.querySelector(".badge");
+        const inlineTwisty = inlineFrag.querySelector(".twisty");
+        const inlineClose = inlineFrag.querySelector(".close");
+        const inlineBody = inlineFrag.querySelector(".clusterBody");
+        const inlineIco = inlineFrag.querySelector(".clusterIco");
+
+        inlineWrapper.classList.add("clusterInline");
+        inlineHeader.classList.add("isStatic", "clusterInlineHeader");
+        inlineHeader.removeAttribute("role");
+        inlineHeader.removeAttribute("tabindex");
+        inlineHeader.setAttribute("aria-disabled", "true");
+        inlineHeader.setAttribute("aria-expanded", "true");
+        inlineTwisty.classList.add("twistyHidden");
+        inlineTwisty.textContent = "▾";
+        inlineBody.hidden = false;
+
+        inlineName.textContent = c.name;
+        inlineBadge.textContent = formatCount(c.count);
+        if (sortedTabs[0].favIconUrl) {
+          inlineIco.src = sortedTabs[0].favIconUrl;
+        }
+
+        inlineClose.addEventListener("click", async (e)=>{
+          e.stopPropagation();
+          const idsArr = Array.from(c.ids);
+          if (idsArr.length >= CONFIRM_THRESHOLD) {
+            if (!confirm(`Reap ${idsArr.length} tabs under “${h.name} / ${c.name}”?`)) return;
+          }
+          try { await browser.tabs.remove(idsArr); } catch(e){ console.error(e); }
+          await refresh();
+        });
+
+        const list = buildTabList(sortedTabs);
+        inlineBody.appendChild(list);
+        body.appendChild(inlineFrag);
+        continue;
+      }
+
       const cfrag = clusterTpl.content.cloneNode(true);
+      const cwrapper = cfrag.querySelector(".cluster");
       const cheader = cfrag.querySelector(".clusterHeader");
       const cname = cfrag.querySelector(".clusterName");
       const cbadge = cfrag.querySelector(".badge");
@@ -163,8 +351,9 @@ function render(root) {
       const cclose = cfrag.querySelector(".close");
       const cbody = cfrag.querySelector(".clusterBody");
       const cico = cfrag.querySelector(".clusterIco");
+
       cname.textContent = c.name;
-      cbadge.textContent = c.count;
+      cbadge.textContent = formatCount(c.count);
       cbody.hidden = true;
       cheader.setAttribute("aria-expanded", "false");
 
@@ -172,12 +361,6 @@ function render(root) {
       if (c.tabs.length > 0 && c.tabs[0].favIconUrl) {
         cico.src = c.tabs[0].favIconUrl;
       }
-
-      const toggleCluster = () => {
-        cbody.hidden = !cbody.hidden;
-        ctwisty.textContent = cbody.hidden ? "▸" : "▾";
-        cheader.setAttribute("aria-expanded", cbody.hidden ? "false" : "true");
-      };
 
       cclose.addEventListener("click", async (e)=>{
         e.stopPropagation();
@@ -189,41 +372,38 @@ function render(root) {
         await refresh();
       });
 
-      cheader.addEventListener("click", (e)=>{
-        if (e.target.closest && e.target.closest(".close")) return;
-        toggleCluster();
-      });
+      const clusterCollapsible = c.tabs.length > 1;
+      if (clusterCollapsible) {
+        const toggleCluster = () => {
+          cbody.hidden = !cbody.hidden;
+          ctwisty.textContent = cbody.hidden ? "▸" : "▾";
+          cheader.setAttribute("aria-expanded", cbody.hidden ? "false" : "true");
+        };
 
-      cheader.addEventListener("keydown", (e)=>{
-        if (e.target !== cheader) return;
-        if (e.key === "Enter" || e.key === " " || e.key === "Spacebar" || e.key === "Space") {
-          e.preventDefault();
+        cheader.addEventListener("click", (e)=>{
+          if (e.target.closest && e.target.closest(".close")) return;
           toggleCluster();
-        }
-      });
+        });
 
-      const list = document.createElement("div");
-      for (const t of c.tabs.slice().sort((a,b)=> (a.title||"").localeCompare(b.title||""))) {
-        const tfrag = tabTpl.content.cloneNode(true);
-        const x = tfrag.querySelector(".x");
-        const a = tfrag.querySelector(".title");
-        const ico = tfrag.querySelector(".ico");
-        const path = tfrag.querySelector(".path");
-        a.textContent = t.title;
-        a.href = t.url;
-        path.textContent = t.subpath || "";
-        if (t.favIconUrl) ico.src = t.favIconUrl;
-        x.addEventListener("click", async (e)=>{
-          e.stopPropagation();
-          try { await browser.tabs.remove(t.id); } catch {}
-          await refresh();
+        cheader.addEventListener("keydown", (e)=>{
+          if (e.target !== cheader) return;
+          if (e.key === "Enter" || e.key === " " || e.key === "Spacebar" || e.key === "Space") {
+            e.preventDefault();
+            toggleCluster();
+          }
         });
-        a.addEventListener("click", (e)=>{
-          e.preventDefault();
-          browser.tabs.update(t.id, { active: true });
-        });
-        list.appendChild(tfrag);
+      } else {
+        cbody.hidden = false;
+        cheader.setAttribute("aria-expanded", "true");
+        cheader.classList.add("isStatic");
+        ctwisty.classList.add("twistyHidden");
+        ctwisty.textContent = "▾";
+        cheader.removeAttribute("role");
+        cheader.removeAttribute("tabindex");
+        cheader.setAttribute("aria-disabled", "true");
       }
+
+      const list = buildTabList(sortedTabs);
       cbody.appendChild(list);
       body.appendChild(cfrag);
     }

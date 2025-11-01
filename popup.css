@@ -48,7 +48,7 @@ body{ font: 12px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubun
 .hostCard{ border:1px solid var(--line); border-radius:14px; background:var(--card); margin:10px 0; overflow:hidden; }
 .hostHeader{ display:flex; align-items:center; gap:8px; padding:10px; background:rgba(124,58,237,0.05); cursor:pointer; }
 .hostHeader .hostName{ font-weight:700; }
-.hostHeader .badge{ background:var(--badge); color:var(--badgeText); font-weight:700; font-size:11px; padding:2px 8px; border-radius:999px; }
+.hostHeader .badge{ background:var(--badge); color:var(--badgeText); font-weight:700; font-size:11px; padding:2px 8px; border-radius:999px; white-space:nowrap; }
 .hostHeader .twisty{ border:1px solid var(--line); background:var(--card); width:26px; height:24px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; pointer-events:none; }
 .hostHeader .close{ padding:4px 10px; border:1px solid var(--accent); background:transparent; color:var(--accent); border-radius:999px; cursor:pointer; font-weight:700; }
 .hostHeader .close:hover{ background:rgba(124,58,237,0.1); }
@@ -59,12 +59,21 @@ body{ font: 12px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubun
 .cluster{ border-left:2px dotted var(--line); margin:4px 0 10px 10px; padding-left:12px; }
 .clusterHeader{ display:flex; align-items:center; gap:8px; padding:6px 0; cursor:pointer; }
 .clusterHeader .clusterName{ font-weight:600; }
-.clusterHeader .badge{ background:var(--badge); color:var(--badgeText); padding:1px 6px; border-radius:999px; }
+.clusterHeader .badge{ background:var(--badge); color:var(--badgeText); padding:1px 6px; border-radius:999px; white-space:nowrap; }
 .clusterHeader .twisty{ border:1px solid var(--line); background:var(--card); width:24px; height:22px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; pointer-events:none; }
 .clusterHeader .close{ padding:2px 8px; border:1px solid var(--accent); background:transparent; color:var(--accent); border-radius:999px; cursor:pointer; }
 .clusterHeader .clusterIco{ width:14px; height:14px; border-radius:3px; background:#e5e7eb; }
 
 .clusterBody{ margin-top:4px; }
+.clusterInline{ border-left:none; margin:6px 0 10px 0; padding-left:0; }
+.clusterInlineHeader{ cursor:default; padding:0; }
+.clusterInline .clusterBody{ margin-top:2px; }
+.clusterSolo{ border-left:none; margin:4px 0 10px 0; padding-left:0; }
+.clusterSoloHeader{ display:flex; align-items:center; gap:8px; padding:0 0 4px 0; cursor:default; color:var(--muted); }
+.clusterSoloHeader .clusterName{ font-weight:600; }
+.clusterSoloHeader .badge{ margin-left:0; }
+.clusterSoloHeader .close{ padding:2px 8px; }
+.clusterSoloBody{ margin-top:0; }
 .tab{ display:flex; align-items:center; gap:8px; padding:4px 6px; border-radius:8px; }
 .tab:hover{ background:rgba(124,58,237,0.08); }
 .tab .x{ border:none; background:transparent; color:var(--accent); cursor:pointer; font-size:12px; }
@@ -74,3 +83,8 @@ body{ font: 12px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubun
 
 .small{ color:var(--muted); font-size:11px; }
 .spacer{ flex:1; }
+
+.hostHeader.isStatic,
+.clusterHeader.isStatic{ cursor:default; }
+
+.twistyHidden{ display:none !important; }
