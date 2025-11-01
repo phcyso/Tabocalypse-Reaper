@@ -28,9 +28,16 @@ Logo: `logo.svg` (purple gradient, skull+scythe).
 - MDN `img-src` — CSP directive for favicons. https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/img-src
 
 ## Install (Temporary)
-1) Open `about:debugging#/runtime/this-firefox`  
-2) **Load Temporary Add-on…**  
-3) Select `manifest.json`.
+1) Open `about:debugging#/runtime/this-firefox`
+2) **Load Temporary Add-on…**
+3) Run `npm run prepare` to compile TypeScript and stage assets into `dist/`.
+4) Select `dist/manifest.json`.
+
+## Source Layout
+- `src/`: TypeScript source, organized by feature area (`browser/`, `dom/`, `model/`, `theme/`, `utils/`, plus `popup.ts`), along with HTML, CSS, the manifest, and static assets.
+- `tests/`: Vitest unit tests for pure helpers (URL normalization, tab model, etc.).
+- `dist/`: Generated output. Created by `npm run prepare`; do not edit by hand.
+- `web-ext-artifacts/`: Build archives emitted by `npm run build` (ignored in git).
 
 ## CI/CD Pipeline
 
@@ -41,9 +48,9 @@ This repository uses GitHub Actions to automate testing, building, and releasing
 
 #### Pull Request Builds (`.github/workflows/pr-build.yml`)
 Triggered on **all pull requests** to the `main` branch:
-1. Lints the extension using `web-ext lint`
-2. Builds an **unsigned** extension package
-3. Uploads the build artifact to the PR
+1. Runs `npm run lint` (type-checks, runs Vitest unit tests, rebuilds `dist/`, and executes `web-ext lint` against the compiled bundle).
+2. Runs `npm run build` to produce an **unsigned** package via the TypeScript pipeline and `web-ext build`.
+3. Uploads the build artifact to the PR.
 
 **Retrieving PR artifacts:**
 1. Navigate to the pull request page
@@ -54,11 +61,11 @@ Triggered on **all pull requests** to the `main` branch:
 
 #### Release Builds (`.github/workflows/release.yml`)
 Triggered on **pushes to the `main` branch**:
-1. Lints the extension using `web-ext lint`
-2. Automatically **bumps the patch version** in `manifest.json` (e.g., 0.4.0 → 0.4.1)
-3. Commits the version bump back to the repository
-4. Builds the extension package
-5. Creates a GitHub Release with the version tag and attaches the build artifact
+1. Runs `npm run lint` to type-check, run unit tests, rebuild the extension, and lint the compiled output via `web-ext`.
+2. Automatically **bumps the patch version** in `src/manifest.json` (e.g., 0.4.0 → 0.4.1).
+3. Commits the version bump back to the repository.
+4. Runs `npm run build` to emit the signed artifact through the TypeScript pipeline and `web-ext build`.
+5. Creates a GitHub Release with the version tag and attaches the build artifact.
 
 **Note:** Releases are **private** by default (visible only to repository collaborators).
 
@@ -70,14 +77,14 @@ Patch versions (e.g., 0.4.0 → 0.4.1) are **automatically incremented** on ever
 #### Manual Minor/Major Version Bumps
 For **minor** (e.g., 0.4.0 → 0.5.0) or **major** (e.g., 0.4.0 → 1.0.0) version bumps:
 
-1. **Update `manifest.json` manually:**
+1. **Update `src/manifest.json` manually:**
    ```json
    "version": "0.5.0"
    ```
 
 2. **Commit and push:**
    ```bash
-   git add manifest.json
+   git add src/manifest.json
    git commit -m "chore: bump version to 0.5.0"
    git push
    ```
@@ -98,12 +105,35 @@ See [Firefox Extension Versioning Guidelines](https://extensionworkshop.com/docu
 npm install
 ```
 
-**Lint the extension:**
+**Compile TypeScript + copy static assets:**
+```bash
+npm run prepare
+```
+
+The compiled extension lives in `dist/`; this is the directory that `web-ext` targets.
+
+**Live-reload development server (TypeScript watch + web-ext run):**
+```bash
+npm run dev
+```
+
+**Type-check without emitting output:**
+```bash
+npm run typecheck
+```
+
+**Run unit tests:**
+```bash
+npm run test
+```
+
+**Lint the extension bundle:**
 ```bash
 npm run lint
 ```
+This script runs the type-checker, Vitest suite, rebuilds `dist/`, and then executes `web-ext lint`.
 
-**Build the extension:**
+**Build a distributable `.zip`:**
 ```bash
 npm run build
 ```
