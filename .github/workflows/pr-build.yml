@@ -11,6 +11,8 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+    outputs:
+      artifact_url: ${{ steps.upload_artifact.outputs.artifact-url }}
 
     steps:
       - name: Checkout code
@@ -39,47 +41,44 @@ jobs:
           path: web-ext-artifacts/*.zip
           retention-days: 30
 
+  comment-artifact:
+    needs: build
+    if: github.event_name == 'pull_request' && needs.build.outputs.artifact_url != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
       - name: Post artifact link to PR
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
         env:
-          ARTIFACT_URL: ${{ steps.upload_artifact.outputs.artifact-url }}
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const artifactUrl = process.env.ARTIFACT_URL;
-            if (!artifactUrl) {
-              core.warning('No artifact URL available to post to the pull request.');
-              return;
-            }
+          ARTIFACT_URL: ${{ needs.build.outputs.artifact_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [ -z "$ARTIFACT_URL" ] || [ "$ARTIFACT_URL" = "null" ]; then
+            echo "No artifact URL available to post to the pull request." >&2
+            exit 0
+          fi
 
-            const marker = '<!-- pr-build-artifact -->';
-            const body = `${marker}\n🔗 [Download PR build artifact](${artifactUrl})`;
+          body=$(cat <<EOF
+<!-- pr-build-artifact -->
+🔗 [Download PR build artifact]($ARTIFACT_URL)
+EOF
+)
 
-            const { owner, repo } = context.repo;
-            const issue_number = context.issue.number;
+          existing_comment_id=$(gh api \
+            repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments \
+            --paginate \
+            --jq 'map(select(.user.login=="github-actions[bot]" and (.body | contains("<!-- pr-build-artifact -->")))) | .[0].id'
+          )
 
-            const comments = await github.paginate(
-              github.rest.issues.listComments,
-              { owner, repo, issue_number }
-            );
-
-            const existing = comments.find(
-              (comment) => comment.user?.login === 'github-actions[bot]' && comment.body?.includes(marker)
-            );
-
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner,
-                repo,
-                comment_id: existing.id,
-                body,
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner,
-                repo,
-                issue_number,
-                body,
-              });
-            }
+          if [ -n "$existing_comment_id" ] && [ "$existing_comment_id" != "null" ]; then
+            gh api \
+              repos/$GITHUB_REPOSITORY/issues/comments/$existing_comment_id \
+              -X PATCH \
+              -f body="$body" \
+              >/dev/null
+          else
+            gh pr comment --repo "$GITHUB_REPOSITORY" "$ISSUE_NUMBER" --body "$body"
+          fi
