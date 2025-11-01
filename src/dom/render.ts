@@ -24,6 +24,10 @@ export interface RenderContext {
   onRefresh: () => Promise<void>;
 }
 
+interface TabRenderOptions {
+  inlineClusterLabel?: string | null;
+}
+
 /**
  * Rebuilds the popup tree from scratch by cloning templates for each host and cluster.
  * The function keeps the DOM shallow (host → cluster → tab) and wires refresh callbacks
@@ -79,7 +83,9 @@ function decorateHost(
   badge.textContent = String(host.count);
   iconToggle(icon, findHostFavicon(host));
 
-  const shouldExpand = renderState.expandedHosts.has(hostKey);
+  const clusterEntries = [...host.children.entries()];
+  const shouldCondense = clusterEntries.length === 1;
+  const shouldExpand = shouldCondense ? true : renderState.expandedHosts.has(hostKey);
   setSectionExpanded(body, twisty, header, shouldExpand);
 
   const toggle = () => {
@@ -128,8 +134,10 @@ function decorateHost(
     }
   });
 
-  const clusters = sortClusters([...host.children.entries()], context.sortMode);
-  for (const [clusterKey, cluster] of clusters) {
+  const readyClusters = sortClusters(clusterEntries, context.sortMode);
+
+  if (shouldCondense && readyClusters.length === 1) {
+    const [clusterKey, cluster] = readyClusters[0]!;
     const clusterFragment = clusterTemplate.content.cloneNode(true) as DocumentFragment;
     decorateCluster(
       clusterFragment,
@@ -139,9 +147,25 @@ function decorateHost(
       cluster,
       context,
       badge,
-      tabTemplate
+      tabTemplate,
+      { condensed: true }
     );
     body.append(clusterFragment);
+  } else {
+    for (const [clusterKey, cluster] of readyClusters) {
+      const clusterFragment = clusterTemplate.content.cloneNode(true) as DocumentFragment;
+      decorateCluster(
+        clusterFragment,
+        hostKey,
+        host,
+        clusterKey,
+        cluster,
+        context,
+        badge,
+        tabTemplate
+      );
+      body.append(clusterFragment);
+    }
   }
 }
 
@@ -157,8 +181,10 @@ function decorateCluster(
   cluster: ClusterNode,
   context: RenderContext,
   hostBadge: HTMLElement,
-  tabTemplate: HTMLTemplateElement
+  tabTemplate: HTMLTemplateElement,
+  options: { condensed?: boolean } = {}
 ): void {
+  const { condensed = false } = options;
   const clusterElement = requireDescendant<HTMLElement>(fragment, ".cluster");
   const header = requireDescendant<HTMLElement>(fragment, ".clusterHeader");
   const name = requireDescendant<HTMLElement>(fragment, ".clusterName");
@@ -176,7 +202,15 @@ function decorateCluster(
 
   const expandedClusterKeys = renderState.expandedClusters.get(hostKey);
   const shouldExpand = expandedClusterKeys?.has(clusterKey) ?? false;
-  setSectionExpanded(body, twisty, header, shouldExpand);
+  if (!condensed) {
+    setSectionExpanded(body, twisty, header, shouldExpand);
+  } else {
+    clusterElement.classList.add("condensedCluster");
+    header.classList.add("clusterHeaderHidden");
+    closeButton.hidden = true;
+    twisty.hidden = true;
+    body.hidden = false;
+  }
 
   const toggle = () => {
     const currentExpanded = !body.hidden;
@@ -193,48 +227,61 @@ function decorateCluster(
     }
   };
 
-  closeButton.addEventListener("click", async (event) => {
-    event.stopPropagation();
-    if (
-      !confirmBulkClose(
-        cluster.count,
-        `Reap ${cluster.count} tabs under “${host.name} / ${cluster.name}”?`
-      )
-    ) {
-      return;
-    }
+  if (!condensed) {
+    closeButton.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      if (
+        !confirmBulkClose(
+          cluster.count,
+          `Reap ${cluster.count} tabs under “${host.name} / ${cluster.name}”?`
+        )
+      ) {
+        return;
+      }
 
-    try {
-      await closeTabs([...cluster.ids]);
-    } catch (error) {
-      console.error(error);
-      await context.onRefresh();
-      return;
-    }
+      try {
+        await closeTabs([...cluster.ids]);
+      } catch (error) {
+        console.error(error);
+        await context.onRefresh();
+        return;
+      }
 
-    handleClusterRemoval(hostKey, host, clusterKey, cluster, clusterElement, hostBadge);
-  });
+      handleClusterRemoval(hostKey, host, clusterKey, cluster, clusterElement, hostBadge);
+    });
 
-  header.addEventListener("click", (event) => {
-    if (event.target instanceof Element && event.target.closest(".close")) {
-      return;
-    }
-    toggle();
-  });
-
-  header.addEventListener("keydown", (event) => {
-    if (event.target !== header) {
-      return;
-    }
-
-    if (isToggleKey(event.key)) {
-      event.preventDefault();
+    header.addEventListener("click", (event) => {
+      if (event.target instanceof Element && event.target.closest(".close")) {
+        return;
+      }
       toggle();
-    }
-  });
+    });
+
+    header.addEventListener("keydown", (event) => {
+      if (event.target !== header) {
+        return;
+      }
+
+      if (isToggleKey(event.key)) {
+        event.preventDefault();
+        toggle();
+      }
+    });
+  }
 
   const tabList = document.createElement("div");
   const tabs = [...cluster.tabs].sort((a, b) => a.title.localeCompare(b.title));
+
+  const hasClusterLabel = Boolean(cluster.name && cluster.name !== "/");
+  const inlineClusterLabel =
+    condensed && hasClusterLabel && tabs.length === 1 ? cluster.name : null;
+
+  if (condensed && hasClusterLabel && !inlineClusterLabel) {
+    const label = document.createElement("div");
+    label.classList.add("clusterLabel");
+    label.textContent = cluster.name;
+    body.append(label);
+  }
 
   for (const tab of tabs) {
     const tabFragment = tabTemplate.content.cloneNode(true) as DocumentFragment;
@@ -247,7 +294,8 @@ function decorateCluster(
       tab,
       hostBadge,
       badge,
-      context
+      context,
+      { inlineClusterLabel }
     );
     tabList.append(tabFragment);
   }
@@ -267,19 +315,30 @@ function decorateTab(
   cluster: ClusterNode,
   tab: ClusterNode["tabs"][number],
   hostBadge: HTMLElement,
-  clusterBadge: HTMLElement,
-  context: RenderContext
+  clusterBadge: HTMLElement | null,
+  context: RenderContext,
+  options: TabRenderOptions = {}
 ): void {
   const tabElement = requireDescendant<HTMLElement>(fragment, ".tab");
   const closeButton = requireDescendant<HTMLButtonElement>(fragment, ".x");
   const anchor = requireDescendant<HTMLAnchorElement>(fragment, ".title");
   const icon = requireDescendant<HTMLImageElement>(fragment, ".ico");
   const path = requireDescendant<HTMLSpanElement>(fragment, ".path");
+  const clusterTag = requireDescendant<HTMLSpanElement>(fragment, ".clusterTag");
 
   anchor.textContent = tab.title;
   anchor.href = tab.url;
   path.textContent = tab.subpath;
   iconToggle(icon, tab.favIconUrl);
+
+  const { inlineClusterLabel = null } = options;
+  if (inlineClusterLabel) {
+    clusterTag.hidden = false;
+    clusterTag.textContent = inlineClusterLabel;
+  } else {
+    clusterTag.hidden = true;
+    clusterTag.textContent = "";
+  }
 
   closeButton.addEventListener("click", async (event) => {
     event.stopPropagation();
@@ -410,7 +469,7 @@ function handleTabRemoval(
   tab: ClusterNode["tabs"][number],
   tabElement: HTMLElement,
   hostBadge: HTMLElement,
-  clusterBadge: HTMLElement
+  clusterBadge: HTMLElement | null
 ): void {
   tabElement.remove();
 
@@ -446,7 +505,9 @@ function handleTabRemoval(
     updateStatsDisplay();
   }
 
-  clusterBadge.textContent = String(cluster.count);
+  if (clusterBadge) {
+    clusterBadge.textContent = String(cluster.count);
+  }
   hostBadge.textContent = String(host.count);
 
   if (

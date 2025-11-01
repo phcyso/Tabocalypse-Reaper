@@ -43,15 +43,16 @@ function setupDom(): void {
         <div class="clusterBody"></div>
       </div>
     </template>
-    <template id="tabTemplate">
-      <div class="tab">
-        <button class="x" title="Close tab">✕</button>
-        <img class="ico" alt="" referrerpolicy="no-referrer" />
-        <a class="title" target="_self"></a>
-        <span class="path small"></span>
-      </div>
-    </template>
-  `;
+  <template id="tabTemplate">
+    <div class="tab">
+      <img class="ico" alt="" referrerpolicy="no-referrer" />
+      <span class="clusterTag small" hidden></span>
+      <a class="title" target="_self"></a>
+      <span class="path small"></span>
+      <button class="x" title="Close tab">✕</button>
+    </div>
+  </template>
+`;
 }
 
 function baseTab(overrides: Partial<TabSummary> = {}): TabSummary {
