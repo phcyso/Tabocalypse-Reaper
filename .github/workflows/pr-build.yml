@@ -61,11 +61,7 @@ jobs:
             exit 0
           fi
 
-          body=$(cat <<EOF
-<!-- pr-build-artifact -->
-🔗 [Download PR build artifact]($ARTIFACT_URL)
-EOF
-)
+          body="Latest Built Dev Extension:\n 🔗 [Download PR build artifact]($ARTIFACT_URL)"
 
           existing_comment_id=$(gh api \
             repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments \
