@@ -1,4 +1,2 @@
-tabocalypse-reaper.zip
-node_modules
-dist
-web-ext-artifacts
+dist/
+node_modules/

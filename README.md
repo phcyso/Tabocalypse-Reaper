@@ -30,7 +30,8 @@ Logo: `logo.svg` (purple gradient, skull+scythe).
 ## Install (Temporary)
 1) Open `about:debugging#/runtime/this-firefox`  
 2) **Load Temporary Add-on…**  
-3) Select `manifest.json`.
+3) Run `npm run prepare` to compile TypeScript and stage assets into `dist/`.
+4) Select `dist/manifest.json`.
 
 ## CI/CD Pipeline
 
@@ -98,12 +99,29 @@ See [Firefox Extension Versioning Guidelines](https://extensionworkshop.com/docu
 npm install
 ```
 
-**Lint the extension:**
+**Compile TypeScript + copy static assets:**
+```bash
+npm run prepare
+```
+
+The compiled extension lives in `dist/`; this is the directory that `web-ext` targets.
+
+**Live-reload development server (TypeScript watch + web-ext run):**
+```bash
+npm run dev
+```
+
+**Type-check without emitting output:**
+```bash
+npm run typecheck
+```
+
+**Lint the extension bundle:**
 ```bash
 npm run lint
 ```
 
-**Build the extension:**
+**Build a distributable `.zip`:**
 ```bash
 npm run build
 ```
