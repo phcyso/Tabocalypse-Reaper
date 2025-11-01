@@ -85,8 +85,9 @@ function decorateHost(
 
   const clusterEntries = [...host.children.entries()];
   const hasSingleCluster = clusterEntries.length === 1;
+  const hasSingleTab = host.count === 1;
   const shouldCondense = hasSingleCluster;
-  const shouldExpand = shouldCondense ? true : renderState.expandedHosts.has(hostKey);
+  const shouldExpand = hasSingleTab ? true : renderState.expandedHosts.has(hostKey);
   setSectionExpanded(body, twisty, header, shouldExpand);
 
   const toggle = () => {

@@ -131,9 +131,6 @@ describe("renderTree incremental updates", () => {
     const stats = document.getElementById("stats");
     expect(stats?.textContent).toBe("2 tabs matched");
 
-    const hostBody = document.querySelector<HTMLElement>(".hostBody");
-    expect(hostBody?.hidden).toBe(false);
-
     const clusterBody = document.querySelector<HTMLElement>(".cluster .clusterBody");
     expect(clusterBody?.hidden).toBe(false);
 
@@ -242,6 +239,25 @@ describe("renderTree incremental updates", () => {
       expect(tag.hidden).toBe(false);
       expect(tag.textContent).toBe("docs");
     }
+  });
+
+  it("keeps multi-tab hosts collapsed by default", () => {
+    const context: RenderContext = {
+      sortMode: "count",
+      onRefresh: vi.fn(async () => {}),
+    };
+
+    renderTree(
+      buildTabModel([
+        baseTab({ id: 41, url: "https://collapsed.example/docs/api", title: "API" }),
+        baseTab({ id: 42, url: "https://collapsed.example/docs/reference", title: "Reference" }),
+        baseTab({ id: 43, url: "https://collapsed.example/docs/faq", title: "FAQ" }),
+      ]),
+      context
+    );
+
+    const hostBody = document.querySelector<HTMLElement>(".hostBody");
+    expect(hostBody?.hidden).toBe(true);
   });
 
   it("removes a host and updates totals without refreshing", async () => {
