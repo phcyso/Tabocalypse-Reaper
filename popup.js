@@ -160,7 +160,8 @@ function render(root) {
       await refresh();
     });
 
-    const hostCollapsible = h.children.size > 1;
+    const hostHasSingleCluster = h.children.size === 1;
+    const hostCollapsible = !hostHasSingleCluster;
     if (hostCollapsible) {
       const toggleHost = () => {
         body.hidden = !body.hidden;
@@ -193,6 +194,52 @@ function render(root) {
     let clusters = [...h.children.values()];
     clusters.sort((a,b)=> sortMode==="alpha" ? a.name.localeCompare(b.name) : b.count-a.count);
     for (const c of clusters) {
+      const sortedTabs = c.tabs.slice().sort((a,b)=> (a.title||"").localeCompare(b.title||""));
+      const clusterSingleTab = sortedTabs.length === 1;
+
+      if (clusterSingleTab) {
+        const inlineFrag = clusterTpl.content.cloneNode(true);
+        const inlineWrapper = inlineFrag.querySelector(".cluster");
+        const inlineHeader = inlineFrag.querySelector(".clusterHeader");
+        const inlineName = inlineFrag.querySelector(".clusterName");
+        const inlineBadge = inlineFrag.querySelector(".badge");
+        const inlineTwisty = inlineFrag.querySelector(".twisty");
+        const inlineClose = inlineFrag.querySelector(".close");
+        const inlineBody = inlineFrag.querySelector(".clusterBody");
+        const inlineIco = inlineFrag.querySelector(".clusterIco");
+
+        inlineWrapper.classList.add("clusterInline");
+        inlineHeader.classList.add("isStatic", "clusterInlineHeader");
+        inlineHeader.removeAttribute("role");
+        inlineHeader.removeAttribute("tabindex");
+        inlineHeader.setAttribute("aria-disabled", "true");
+        inlineHeader.setAttribute("aria-expanded", "true");
+        inlineTwisty.classList.add("twistyHidden");
+        inlineTwisty.textContent = "▾";
+        inlineBody.hidden = false;
+
+        inlineName.textContent = c.name;
+        inlineBadge.textContent = formatCount(c.count);
+        if (sortedTabs[0].favIconUrl) {
+          inlineIco.src = sortedTabs[0].favIconUrl;
+        }
+
+        inlineClose.addEventListener("click", async (e)=>{
+          e.stopPropagation();
+          const idsArr = Array.from(c.ids);
+          if (idsArr.length >= CONFIRM_THRESHOLD) {
+            if (!confirm(`Reap ${idsArr.length} tabs under “${h.name} / ${c.name}”?`)) return;
+          }
+          try { await browser.tabs.remove(idsArr); } catch(e){ console.error(e); }
+          await refresh();
+        });
+
+        const list = buildTabList(sortedTabs);
+        inlineBody.appendChild(list);
+        body.appendChild(inlineFrag);
+        continue;
+      }
+
       const cfrag = clusterTpl.content.cloneNode(true);
       const cheader = cfrag.querySelector(".clusterHeader");
       const cname = cfrag.querySelector(".clusterName");
@@ -241,6 +288,12 @@ function render(root) {
             toggleCluster();
           }
         });
+
+        if (hostHasSingleCluster) {
+          cbody.hidden = false;
+          cheader.setAttribute("aria-expanded", "true");
+          ctwisty.textContent = "▾";
+        }
       } else {
         cbody.hidden = false;
         cheader.setAttribute("aria-expanded", "true");
@@ -252,7 +305,6 @@ function render(root) {
         cheader.setAttribute("aria-disabled", "true");
       }
 
-      const sortedTabs = c.tabs.slice().sort((a,b)=> (a.title||"").localeCompare(b.title||""));
       const list = buildTabList(sortedTabs);
       cbody.appendChild(list);
       body.appendChild(cfrag);
