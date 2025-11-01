@@ -100,6 +100,7 @@ function render(root) {
 
   for (const h of hosts) {
     const frag = hostTpl.content.cloneNode(true);
+    const header = frag.querySelector(".hostHeader");
     const name = frag.querySelector(".hostName");
     const badge = frag.querySelector(".badge");
     const twisty = frag.querySelector(".twisty");
@@ -110,6 +111,7 @@ function render(root) {
     name.textContent = h.name;
     badge.textContent = h.count;
     body.hidden = true;
+    header.setAttribute("aria-expanded", "false");
 
     // Set host icon: use first available favicon from any tab in the host
     let hostFavicon = "";
@@ -121,6 +123,12 @@ function render(root) {
     }
     if (hostFavicon) ico.src = hostFavicon;
 
+    const toggleHost = () => {
+      body.hidden = !body.hidden;
+      twisty.textContent = body.hidden ? "▸" : "▾";
+      header.setAttribute("aria-expanded", body.hidden ? "false" : "true");
+    };
+
     closeBtn.addEventListener("click", async (e)=>{
       e.stopPropagation();
       const idsArr = Array.from(h.ids);
@@ -131,15 +139,24 @@ function render(root) {
       await refresh();
     });
 
-    twisty.addEventListener("click", ()=>{
-      body.hidden = !body.hidden;
-      twisty.textContent = body.hidden ? "▸" : "▾";
+    header.addEventListener("click", (e)=>{
+      if (e.target.closest && e.target.closest(".close")) return;
+      toggleHost();
+    });
+
+    header.addEventListener("keydown", (e)=>{
+      if (e.target !== header) return;
+      if (e.key === "Enter" || e.key === " " || e.key === "Spacebar" || e.key === "Space") {
+        e.preventDefault();
+        toggleHost();
+      }
     });
 
     let clusters = [...h.children.values()];
     clusters.sort((a,b)=> sortMode==="alpha" ? a.name.localeCompare(b.name) : b.count-a.count);
     for (const c of clusters) {
       const cfrag = clusterTpl.content.cloneNode(true);
+      const cheader = cfrag.querySelector(".clusterHeader");
       const cname = cfrag.querySelector(".clusterName");
       const cbadge = cfrag.querySelector(".badge");
       const ctwisty = cfrag.querySelector(".twisty");
@@ -149,11 +166,18 @@ function render(root) {
       cname.textContent = c.name;
       cbadge.textContent = c.count;
       cbody.hidden = true;
+      cheader.setAttribute("aria-expanded", "false");
 
       // Set cluster icon: use first tab favicon from cluster
       if (c.tabs.length > 0 && c.tabs[0].favIconUrl) {
         cico.src = c.tabs[0].favIconUrl;
       }
+
+      const toggleCluster = () => {
+        cbody.hidden = !cbody.hidden;
+        ctwisty.textContent = cbody.hidden ? "▸" : "▾";
+        cheader.setAttribute("aria-expanded", cbody.hidden ? "false" : "true");
+      };
 
       cclose.addEventListener("click", async (e)=>{
         e.stopPropagation();
@@ -165,9 +189,17 @@ function render(root) {
         await refresh();
       });
 
-      ctwisty.addEventListener("click", ()=>{
-        cbody.hidden = !cbody.hidden;
-        ctwisty.textContent = cbody.hidden ? "▸" : "▾";
+      cheader.addEventListener("click", (e)=>{
+        if (e.target.closest && e.target.closest(".close")) return;
+        toggleCluster();
+      });
+
+      cheader.addEventListener("keydown", (e)=>{
+        if (e.target !== cheader) return;
+        if (e.key === "Enter" || e.key === " " || e.key === "Spacebar" || e.key === "Space") {
+          e.preventDefault();
+          toggleCluster();
+        }
       });
 
       const list = document.createElement("div");
