@@ -56,7 +56,7 @@ describe("buildTabModel", () => {
     expect(host?.children.get("project")?.count).toBe(1);
   });
 
-  it("normalizes URLs when requested", () => {
+  it("normalizes URLs by default", () => {
     const tabs: TabSummary[] = [
       baseTab({
         id: 1,
@@ -68,7 +68,7 @@ describe("buildTabModel", () => {
       }),
     ];
 
-    const model = buildTabModel(tabs, { normalize: true });
+    const model = buildTabModel(tabs);
     const host = model.children.get("example.com");
     expect(host?.count).toBe(2);
     expect(host?.children.size).toBe(1);

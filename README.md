@@ -15,7 +15,7 @@ Logo: `logo.svg` (purple gradient, skull+scythe).
 
 ## Store listing (draft)
 **Short** — Reap your tab chaos. Group by site and path, preview, and close whole clusters in one click.  
-**Long** — Groups tabs by **host → cluster** (special GitHub/AWS handling). Shows favicons for quick scanning, accurate counts, purple theme that adapts to your browser. Reap entire groups or pick individual tabs. Works across windows. Options: filter, exclude pinned, normalize tracking params.
+**Long** — Groups tabs by **host → cluster** (special GitHub/AWS handling). Shows favicons for quick scanning, accurate counts, purple theme that adapts to your browser. Reap entire groups or pick individual tabs. Works across windows. Options: filter, exclude pinned.
 
 **Permissions** — `tabs` (enumerate/close tabs), `storage` (persist options in future), `theme` (adapt to browser theme).
 

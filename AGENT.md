@@ -7,7 +7,7 @@ Purpose: Firefox WebExtension (manifest v2) that groups open tabs Host → Clust
 
 ## Function Contracts
 - `queryOpenTabs()`: returns light array of tab objects (id, url, title, pinned, windowId, favIconUrl).
-- `buildTabModel(tabs, { excludePinned, normalize, filter })`: builds root node with `children` (Map host→node), each host node has cluster nodes; computes counts and ID sets.
+- `buildTabModel(tabs, { excludePinned, filter })`: builds root node with `children` (Map host→node), each host node has cluster nodes; computes counts and ID sets.
 - `renderTree(root, { sortMode, onRefresh })`: clones templates (`#hostTemplate`, `#clusterTemplate`, `#tabTemplate`), sorts (count or alpha), wires handlers (twisty, reap, tab activate).
 - `refresh()`: reads UI state (checkboxes, search, sort), calls above.
 
@@ -51,7 +51,7 @@ Host count = unique tab IDs across its clusters. Cluster count = `tabs.length`.
 Keep new code close to the relevant module; prefer pure helpers in `model/` and `utils/` so they can be unit-tested.
 
 ## Filtering
-Search box matches lowercased concatenation: `host pathname title`. Schemes excluded: `about:`, `moz-extension:`, `chrome:`. Optional pinned exclusion and normalization toggles.
+Search box matches lowercased concatenation: `host pathname title`. Schemes excluded: `about:`, `moz-extension:`, `chrome:`. Optional pinned exclusion toggle.
 
 ## UX Conventions
 Twisty buttons toggle bodies (`▸` / `▾`). "Reap" buttons trigger bulk close; single tab close uses `✕` button; clicking title focuses tab via `browser.tabs.update(id,{active:true})` instead of navigation.

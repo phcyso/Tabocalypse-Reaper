@@ -25,7 +25,6 @@ export interface ClusterTab {
 
 export interface BuildOptions {
   excludePinned?: boolean;
-  normalize?: boolean;
   filter?: string;
 }
 
