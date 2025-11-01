@@ -72,7 +72,8 @@ Manifest v2 uses `browser_action`. Permissions: `tabs`, `storage` (future), `the
 
 ## Visual Regression Workflow
 - After every UI-facing change, capture fresh screenshots via the Playwright MCP server.
-- Store captures inside `test-screenshots/` using descriptive names that reflect the feature or regression scenario (e.g., `<FEATURE_NAME>-condensed-view.png`, `<FEATURE-NAME>-cluster-toggle-regression.png`). Don’t overwrite previous captures—pick a unique name per change so prior history stays intact.
+- Store captures inside `test-screenshots/` using descriptive names that reflect the feature or regression scenario (e.g., `<FEATURE_NAME>-condensed-view-<TIME>.png`, `<FEATURE-NAME>-cluster-toggle-regression-<TIME>.png`). Don’t overwrite previous captures—pick a unique name per change so prior history stays intact.
+- Playwright saves screenshots to a process-private temp directory (e.g., `/var/.../playwright-mcp-output/...`). Copy or move the capture into `test-screenshots/` immediately—don’t expect reviewers to access the temp path.
 - Treat these captures as living documentation—update them alongside DOM/CSS adjustments so reviewers can compare diffs and ensure the popup still renders as expected.
 - See `docs/playwright-harness.md` for the end-to-end Playwright MCP workflow, including harness regeneration and scenario setup tips.
 

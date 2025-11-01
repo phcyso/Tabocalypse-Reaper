@@ -84,9 +84,9 @@ function decorateHost(
   iconToggle(icon, findHostFavicon(host));
 
   const clusterEntries = [...host.children.entries()];
-  const hasSingleTab = host.count === 1;
-  const shouldCondense = hasSingleTab && clusterEntries.length === 1;
-  const shouldExpand = hasSingleTab ? true : renderState.expandedHosts.has(hostKey);
+  const hasSingleCluster = clusterEntries.length === 1;
+  const shouldCondense = hasSingleCluster;
+  const shouldExpand = shouldCondense ? true : renderState.expandedHosts.has(hostKey);
   setSectionExpanded(body, twisty, header, shouldExpand);
 
   const toggle = () => {
@@ -274,8 +274,7 @@ function decorateCluster(
   const tabs = [...cluster.tabs].sort((a, b) => a.title.localeCompare(b.title));
 
   const hasClusterLabel = Boolean(cluster.name && cluster.name !== "/");
-  const inlineClusterLabel =
-    condensed && hasClusterLabel && tabs.length === 1 ? cluster.name : null;
+  const inlineClusterLabel = condensed && hasClusterLabel ? cluster.name : null;
 
   if (condensed && hasClusterLabel && !inlineClusterLabel) {
     const label = document.createElement("div");

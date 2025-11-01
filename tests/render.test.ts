@@ -198,6 +198,52 @@ describe("renderTree incremental updates", () => {
     expect(hint?.hidden).toBe(false);
   });
 
+  it("inlines a single cluster so its tabs are visible without expansion", () => {
+    const context: RenderContext = {
+      sortMode: "count",
+      onRefresh: vi.fn(async () => {}),
+    };
+
+    renderTree(
+      buildTabModel([
+        baseTab({ id: 31, url: "https://example.com/docs/api", title: "API" }),
+        baseTab({ id: 32, url: "https://example.com/docs/reference", title: "Reference" }),
+        baseTab({ id: 33, url: "https://example.com/docs/faq", title: "FAQ" }),
+      ]),
+      context
+    );
+
+    const hostBody = document.querySelector<HTMLElement>(".hostBody");
+    expect(hostBody?.hidden).toBe(false);
+
+    const cluster = document.querySelector<HTMLElement>(".cluster");
+    expect(cluster).not.toBeNull();
+
+    const clusterHeader = cluster!.querySelector<HTMLElement>(".clusterHeader");
+    expect(clusterHeader).not.toBeNull();
+    expect(clusterHeader!.classList.contains("clusterHeaderHidden")).toBe(true);
+
+    const clusterBody = cluster!.querySelector<HTMLElement>(".clusterBody");
+    expect(clusterBody).not.toBeNull();
+    expect(clusterBody!.hidden).toBe(false);
+
+    const twisty = clusterHeader!.querySelector<HTMLElement>(".twisty");
+    expect(twisty?.hidden).toBe(true);
+
+    const closeButton = clusterHeader!.querySelector<HTMLButtonElement>(".close");
+    expect(closeButton?.hidden).toBe(true);
+
+    const tabs = clusterBody!.querySelectorAll<HTMLElement>(".tab");
+    expect(tabs.length).toBe(3);
+
+    const clusterTags = [...document.querySelectorAll<HTMLElement>(".clusterTag")];
+    expect(clusterTags).toHaveLength(3);
+    for (const tag of clusterTags) {
+      expect(tag.hidden).toBe(false);
+      expect(tag.textContent).toBe("docs");
+    }
+  });
+
   it("removes a host and updates totals without refreshing", async () => {
     const context: RenderContext = {
       sortMode: "count",
