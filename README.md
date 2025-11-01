@@ -34,7 +34,8 @@ Logo: `logo.svg` (purple gradient, skull+scythe).
 4) Select `dist/manifest.json`.
 
 ## Source Layout
-- `src/`: TypeScript source (`popup.ts`), HTML, CSS, manifest, and static assets.
+- `src/`: TypeScript source, organized by feature area (`browser/`, `dom/`, `model/`, `theme/`, `utils/`, plus `popup.ts`), along with HTML, CSS, the manifest, and static assets.
+- `tests/`: Vitest unit tests for pure helpers (URL normalization, tab model, etc.).
 - `dist/`: Generated output. Created by `npm run prepare`; do not edit by hand.
 - `web-ext-artifacts/`: Build archives emitted by `npm run build` (ignored in git).
 
@@ -47,7 +48,7 @@ This repository uses GitHub Actions to automate testing, building, and releasing
 
 #### Pull Request Builds (`.github/workflows/pr-build.yml`)
 Triggered on **all pull requests** to the `main` branch:
-1. Runs `npm run lint` (cleans + compiles TypeScript, type-checks, and executes `web-ext lint` against `dist/`).
+1. Runs `npm run lint` (type-checks, runs Vitest unit tests, rebuilds `dist/`, and executes `web-ext lint` against the compiled bundle).
 2. Runs `npm run build` to produce an **unsigned** package via the TypeScript pipeline and `web-ext build`.
 3. Uploads the build artifact to the PR.
 
@@ -60,7 +61,7 @@ Triggered on **all pull requests** to the `main` branch:
 
 #### Release Builds (`.github/workflows/release.yml`)
 Triggered on **pushes to the `main` branch**:
-1. Runs `npm run lint` to compile the TypeScript sources, type-check, and lint the built extension via `web-ext`.
+1. Runs `npm run lint` to type-check, run unit tests, rebuild the extension, and lint the compiled output via `web-ext`.
 2. Automatically **bumps the patch version** in `src/manifest.json` (e.g., 0.4.0 → 0.4.1).
 3. Commits the version bump back to the repository.
 4. Runs `npm run build` to emit the signed artifact through the TypeScript pipeline and `web-ext build`.
@@ -121,10 +122,16 @@ npm run dev
 npm run typecheck
 ```
 
+**Run unit tests:**
+```bash
+npm run test
+```
+
 **Lint the extension bundle:**
 ```bash
 npm run lint
 ```
+This script runs the type-checker, Vitest suite, rebuilds `dist/`, and then executes `web-ext lint`.
 
 **Build a distributable `.zip`:**
 ```bash
