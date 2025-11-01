@@ -84,8 +84,9 @@ function decorateHost(
   iconToggle(icon, findHostFavicon(host));
 
   const clusterEntries = [...host.children.entries()];
-  const shouldCondense = clusterEntries.length === 1;
-  const shouldExpand = shouldCondense ? true : renderState.expandedHosts.has(hostKey);
+  const hasSingleTab = host.count === 1;
+  const shouldCondense = hasSingleTab && clusterEntries.length === 1;
+  const shouldExpand = hasSingleTab ? true : renderState.expandedHosts.has(hostKey);
   setSectionExpanded(body, twisty, header, shouldExpand);
 
   const toggle = () => {

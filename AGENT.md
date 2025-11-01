@@ -68,11 +68,13 @@ Manifest v2 uses `browser_action`. Permissions: `tabs`, `storage` (future), `the
 - `npm run test`: Vitest unit tests under `tests/` (cover URL helpers and the tab model).
 - `npm run lint`: runs `typecheck`, `test`, rebuilds `dist/`, then executes `web-ext lint`.
 - `npm run typecheck`: quick TypeScript validation without rebuilding output.
+- `npm run verify:popup`: rebuilds `dist/`, regenerates the popup harness fixture, and runs the Vitest suite—use this before capturing new UI screenshots.
 
 ## Visual Regression Workflow
 - After every UI-facing change, capture fresh screenshots via the Playwright MCP server.
 - Store captures inside `test-screenshots/` using descriptive names that reflect the feature or regression scenario (e.g., `<FEATURE_NAME>-condensed-view.png`, `<FEATURE-NAME>-cluster-toggle-regression.png`). Don’t overwrite previous captures—pick a unique name per change so prior history stays intact.
 - Treat these captures as living documentation—update them alongside DOM/CSS adjustments so reviewers can compare diffs and ensure the popup still renders as expected.
+- See `docs/playwright-harness.md` for the end-to-end Playwright MCP workflow, including harness regeneration and scenario setup tips.
 
 ## Local Run
 Load temporary add-on: Firefox → `about:debugging#/runtime/this-firefox` → "Load Temporary Add-on…" → select `dist/manifest.json` after running `npm run prepare`.
