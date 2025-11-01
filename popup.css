@@ -11,6 +11,9 @@
   --badgeText: #3b0764;
   --accent: #7c3aed;
   --accent-2: #a78bfa;
+  --accent-strong: #5b21b6;
+  --accent-strong-active: #4c1d95;
+  --accent-contrast: #ffffff;
   --danger: #7c2d12;
   --danger-bg: #fee2e2;
 }
@@ -25,6 +28,9 @@
     --badgeText: #ede9fe;
     --accent: #a78bfa;
     --accent-2: #c4b5fd;
+    --accent-strong: #5b21b6;
+    --accent-strong-active: #43207e;
+    --accent-contrast: #ffffff;
     --danger: #fecaca;
     --danger-bg: #7f1d1d;
   }
@@ -50,8 +56,11 @@ body{ font: 12px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubun
 .hostHeader .hostName{ font-weight:700; }
 .hostHeader .badge{ background:var(--badge); color:var(--badgeText); font-weight:700; font-size:11px; padding:2px 8px; border-radius:999px; }
 .hostHeader .twisty{ border:1px solid var(--line); background:var(--card); width:26px; height:24px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; pointer-events:none; }
-.hostHeader .close{ padding:4px 10px; border:1px solid var(--accent); background:transparent; color:var(--accent); border-radius:999px; cursor:pointer; font-weight:700; }
-.hostHeader .close:hover{ background:rgba(124,58,237,0.1); }
+.reapButton{ padding:4px 10px; border:1px solid var(--accent); background:transparent; color:var(--accent); border-radius:999px; cursor:pointer; font-weight:600; transition: color 120ms ease, background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease; }
+.reapButton:hover{ background:var(--accent-strong); border-color:var(--accent-strong); color:var(--accent-contrast); }
+.reapButton:focus-visible{ outline:none; background:var(--accent-strong); border-color:var(--accent-strong); color:var(--accent-contrast); box-shadow:0 0 0 2px var(--bg), 0 0 0 4px var(--accent-2); }
+.reapButton:active{ background:var(--accent-strong-active); border-color:var(--accent-strong-active); color:var(--accent-contrast); }
+.hostHeader .reapButton{ font-weight:700; }
 .hostHeader .hostIco{ width:16px; height:16px; border-radius:3px; background:#e5e7eb; }
 .dot{ width:8px; height:8px; border-radius:999px; background:var(--accent); display:inline-block; }
 
@@ -61,7 +70,7 @@ body{ font: 12px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubun
 .clusterHeader .clusterName{ font-weight:600; }
 .clusterHeader .badge{ background:var(--badge); color:var(--badgeText); padding:1px 6px; border-radius:999px; }
 .clusterHeader .twisty{ border:1px solid var(--line); background:var(--card); width:24px; height:22px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; pointer-events:none; }
-.clusterHeader .close{ padding:2px 8px; border:1px solid var(--accent); background:transparent; color:var(--accent); border-radius:999px; cursor:pointer; }
+.clusterHeader .reapButton{ padding:2px 8px; }
 .clusterHeader .clusterIco{ width:14px; height:14px; border-radius:3px; background:#e5e7eb; }
 
 .clusterBody{ margin-top:4px; }
