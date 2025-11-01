@@ -6,6 +6,5 @@ export type {
   ClusterNode,
   ClusterTab,
   TabSummary,
-  SortMode,
 } from "./types.js";
 export { NodeKind } from "./types.js";

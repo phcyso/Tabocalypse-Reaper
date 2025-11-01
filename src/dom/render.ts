@@ -1,10 +1,9 @@
 import { activateTab, closeTab, closeTabs } from "../browser/tabs.js";
 import { CONFIRM_THRESHOLD } from "../shared/constants.js";
 import { requireDescendant, requireElement } from "./query.js";
-import type { ClusterNode, HostNode, RootNode, SortMode } from "../model/index.js";
+import type { ClusterNode, HostNode, RootNode } from "../model/index.js";
 
 export interface RenderContext {
-  sortMode: SortMode;
   onRefresh: () => Promise<void>;
 }
 
@@ -24,7 +23,7 @@ export function renderTree(root: RootNode, context: RenderContext): void {
   const clusterTemplate = requireElement<HTMLTemplateElement>("#clusterTemplate");
   const tabTemplate = requireElement<HTMLTemplateElement>("#tabTemplate");
 
-  const hosts = sortHosts([...root.children.values()], context.sortMode);
+  const hosts = sortHosts([...root.children.values()]);
   for (const host of hosts) {
     const fragment = hostTemplate.content.cloneNode(true) as DocumentFragment;
     decorateHost(fragment, host, context, clusterTemplate, tabTemplate);
@@ -91,7 +90,7 @@ function decorateHost(
     }
   });
 
-  const clusters = sortClusters([...host.children.values()], context.sortMode);
+  const clusters = sortClusters([...host.children.values()]);
   const bodyContainer = body;
   for (const cluster of clusters) {
     const clusterFragment = clusterTemplate.content.cloneNode(true) as DocumentFragment;
@@ -258,14 +257,10 @@ function findHostFavicon(host: HostNode): string {
   return "";
 }
 
-function sortHosts(hosts: HostNode[], sortMode: SortMode): HostNode[] {
-  return hosts.sort((a, b) =>
-    sortMode === "alpha" ? a.name.localeCompare(b.name) : b.count - a.count
-  );
+function sortHosts(hosts: HostNode[]): HostNode[] {
+  return hosts.sort((a, b) => b.count - a.count);
 }
 
-function sortClusters(clusters: ClusterNode[], sortMode: SortMode): ClusterNode[] {
-  return clusters.sort((a, b) =>
-    sortMode === "alpha" ? a.name.localeCompare(b.name) : b.count - a.count
-  );
+function sortClusters(clusters: ClusterNode[]): ClusterNode[] {
+  return clusters.sort((a, b) => b.count - a.count);
 }
