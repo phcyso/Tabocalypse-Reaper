@@ -4,8 +4,6 @@ export enum NodeKind {
   Cluster = "cluster",
 }
 
-export type SortMode = "alpha" | "count";
-
 export interface TabSummary {
   id: number;
   url: string;

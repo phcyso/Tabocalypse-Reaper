@@ -1,13 +1,12 @@
 import { activateTab, closeTab, closeTabs } from "../browser/tabs.js";
 import { CONFIRM_THRESHOLD } from "../shared/constants.js";
 import { requireDescendant, requireElement } from "./query.js";
-import type { ClusterNode, HostNode, RootNode, SortMode } from "../model/index.js";
+import type { ClusterNode, HostNode, RootNode } from "../model/index.js";
 
 interface RenderState {
   expandedHosts: Set<string>;
   expandedClusters: Map<string, Set<string>>;
   currentRoot: RootNode | null;
-  sortMode: SortMode | null;
   sortStale: boolean;
 }
 
@@ -15,12 +14,10 @@ const renderState: RenderState = {
   expandedHosts: new Set(),
   expandedClusters: new Map(),
   currentRoot: null,
-  sortMode: null,
   sortStale: false,
 };
 
 export interface RenderContext {
-  sortMode: SortMode;
   onRefresh: () => Promise<void>;
 }
 
@@ -31,7 +28,6 @@ export interface RenderContext {
  */
 export function renderTree(root: RootNode, context: RenderContext): void {
   renderState.currentRoot = root;
-  renderState.sortMode = context.sortMode;
   pruneExpandedState(root);
   clearSortStale();
 
@@ -45,7 +41,7 @@ export function renderTree(root: RootNode, context: RenderContext): void {
   const clusterTemplate = requireElement<HTMLTemplateElement>("#clusterTemplate");
   const tabTemplate = requireElement<HTMLTemplateElement>("#tabTemplate");
 
-  const hosts = sortHosts([...root.children.entries()], context.sortMode);
+  const hosts = sortHosts([...root.children.entries()]);
   for (const [hostKey, host] of hosts) {
     const fragment = hostTemplate.content.cloneNode(true) as DocumentFragment;
     decorateHost(fragment, hostKey, host, context, clusterTemplate, tabTemplate);
@@ -128,7 +124,7 @@ function decorateHost(
     }
   });
 
-  const clusters = sortClusters([...host.children.entries()], context.sortMode);
+  const clusters = sortClusters([...host.children.entries()]);
   for (const [clusterKey, cluster] of clusters) {
     const clusterFragment = clusterTemplate.content.cloneNode(true) as DocumentFragment;
     decorateCluster(
@@ -596,21 +592,10 @@ function findHostFavicon(host: HostNode): string {
   return "";
 }
 
-function sortHosts(hosts: [string, HostNode][], sortMode: SortMode): [string, HostNode][] {
-  return hosts.sort((a, b) =>
-    sortMode === "alpha"
-      ? a[1].name.localeCompare(b[1].name)
-      : b[1].count - a[1].count
-  );
+function sortHosts(hosts: [string, HostNode][]): [string, HostNode][] {
+  return hosts.sort((a, b) => b[1].count - a[1].count);
 }
 
-function sortClusters(
-  clusters: [string, ClusterNode][],
-  sortMode: SortMode
-): [string, ClusterNode][] {
-  return clusters.sort((a, b) =>
-    sortMode === "alpha"
-      ? a[1].name.localeCompare(b[1].name)
-      : b[1].count - a[1].count
-  );
+function sortClusters(clusters: [string, ClusterNode][]): [string, ClusterNode][] {
+  return clusters.sort((a, b) => b[1].count - a[1].count);
 }

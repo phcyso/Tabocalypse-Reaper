@@ -79,7 +79,6 @@ describe("renderTree incremental updates", () => {
 
   it("removes a single tab while preserving expanded sections", async () => {
     const context: RenderContext = {
-      sortMode: "count",
       onRefresh: vi.fn(async () => {}),
     };
 
@@ -154,7 +153,6 @@ describe("renderTree incremental updates", () => {
 
   it("removes an entire cluster and keeps the host expanded", async () => {
     const context: RenderContext = {
-      sortMode: "count",
       onRefresh: vi.fn(async () => {}),
     };
 
@@ -199,7 +197,6 @@ describe("renderTree incremental updates", () => {
 
   it("removes a host and updates totals without refreshing", async () => {
     const context: RenderContext = {
-      sortMode: "count",
       onRefresh: vi.fn(async () => {}),
     };
 

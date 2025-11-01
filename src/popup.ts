@@ -2,25 +2,19 @@ import { queryOpenTabs } from "./browser/tabs.js";
 import { renderTree } from "./dom/render.js";
 import { requireElement } from "./dom/query.js";
 import { buildTabModel } from "./model/index.js";
-import type { SortMode } from "./model/index.js";
 import { applyThemeFromBrowser } from "./theme/applyTheme.js";
 
 async function refresh(): Promise<void> {
-  const [excludePinned, filter, sortMode] = readUiState();
+  const [excludePinned, filter] = readUiState();
   const tabs = await queryOpenTabs();
   const model = buildTabModel(tabs, { excludePinned, filter });
-  renderTree(model, { sortMode, onRefresh: refresh });
+  renderTree(model, { onRefresh: refresh });
 }
 
-function readUiState(): [boolean, string, SortMode] {
+function readUiState(): [boolean, string] {
   const excludePinned = requireElement<HTMLInputElement>("#excludePinned").checked;
   const filter = requireElement<HTMLInputElement>("#search").value;
-  const sortSelect = requireElement<HTMLSelectElement>("#sort");
-  return [excludePinned, filter, coerceSortMode(sortSelect.value)];
-}
-
-function coerceSortMode(value: string): SortMode {
-  return value === "alpha" ? "alpha" : "count";
+  return [excludePinned, filter];
 }
 
 function wireInteractionHandlers(): void {
@@ -36,9 +30,6 @@ function wireInteractionHandlers(): void {
     void refresh();
   });
 
-  requireElement<HTMLSelectElement>("#sort").addEventListener("change", () => {
-    void refresh();
-  });
 }
 
 async function init(): Promise<void> {
