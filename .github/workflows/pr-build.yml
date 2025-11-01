@@ -10,6 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      pull-requests: write
+    outputs:
+      artifact_url: ${{ steps.upload_artifact.outputs.artifact-url }}
 
     steps:
       - name: Checkout code
@@ -31,8 +34,51 @@ jobs:
         run: npx web-ext build --overwrite-dest
 
       - name: Upload artifact
+        id: upload_artifact
         uses: actions/upload-artifact@v4
         with:
           name: firefox-extension-unsigned
           path: web-ext-artifacts/*.zip
           retention-days: 30
+
+  comment-artifact:
+    needs: build
+    if: github.event_name == 'pull_request' && needs.build.outputs.artifact_url != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Post artifact link to PR
+        env:
+          ARTIFACT_URL: ${{ needs.build.outputs.artifact_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [ -z "$ARTIFACT_URL" ] || [ "$ARTIFACT_URL" = "null" ]; then
+            echo "No artifact URL available to post to the pull request." >&2
+            exit 0
+          fi
+
+          body=$(cat <<EOF
+<!-- pr-build-artifact -->
+🔗 [Download PR build artifact]($ARTIFACT_URL)
+EOF
+)
+
+          existing_comment_id=$(gh api \
+            repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments \
+            --paginate \
+            --jq 'map(select(.user.login=="github-actions[bot]" and (.body | contains("<!-- pr-build-artifact -->")))) | .[0].id'
+          )
+
+          if [ -n "$existing_comment_id" ] && [ "$existing_comment_id" != "null" ]; then
+            gh api \
+              repos/$GITHUB_REPOSITORY/issues/comments/$existing_comment_id \
+              -X PATCH \
+              -f body="$body" \
+              >/dev/null
+          else
+            gh pr comment --repo "$GITHUB_REPOSITORY" "$ISSUE_NUMBER" --body "$body"
+          fi
