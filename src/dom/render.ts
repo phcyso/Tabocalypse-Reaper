@@ -8,6 +8,11 @@ export interface RenderContext {
   onRefresh: () => Promise<void>;
 }
 
+/**
+ * Rebuilds the popup tree from scratch by cloning templates for each host and cluster.
+ * The function keeps the DOM shallow (host → cluster → tab) and wires refresh callbacks
+ * so bulk operations rehydrate the model after browser mutations.
+ */
 export function renderTree(root: RootNode, context: RenderContext): void {
   const tree = requireElement<HTMLElement>("#tree");
   tree.replaceChildren();
@@ -27,6 +32,10 @@ export function renderTree(root: RootNode, context: RenderContext): void {
   }
 }
 
+/**
+ * Populates a host template fragment with counts, expand/collapse behaviour, and
+ * bulk-close wiring before rendering the host's clusters.
+ */
 function decorateHost(
   fragment: DocumentFragment,
   host: HostNode,
@@ -91,6 +100,10 @@ function decorateHost(
   }
 }
 
+/**
+ * Populates a cluster template fragment, attaching handlers for toggling visibility
+ * and closing every tab in the cluster while deferring to the shared refresh hook.
+ */
 function decorateCluster(
   fragment: DocumentFragment,
   host: HostNode,
@@ -163,6 +176,10 @@ function decorateCluster(
   body.append(tabList);
 }
 
+/**
+ * Hydrates the tab template with URL details and wires click handlers that either close
+ * the specific tab or activate it in the current window without leaving the popup.
+ */
 function decorateTab(fragment: DocumentFragment, tab: ClusterNode["tabs"][number], context: RenderContext): void {
   const closeButton = requireDescendant<HTMLButtonElement>(fragment, ".x");
   const anchor = requireDescendant<HTMLAnchorElement>(fragment, ".title");
@@ -198,6 +215,10 @@ function iconToggle(element: HTMLImageElement, url: string): void {
   }
 }
 
+/**
+ * Toggles a collapsible section and keeps the twisty glyph and ARIA attributes in sync
+ * so both keyboard and assistive technologies perceive the expansion state.
+ */
 function toggleSection(target: HTMLElement, twisty: HTMLElement, header: HTMLElement): void {
   target.hidden = !target.hidden;
   twisty.textContent = target.hidden ? "▸" : "▾";
@@ -212,6 +233,10 @@ function formatStats(count: number): string {
   return `${count} tab${count === 1 ? "" : "s"} matched`;
 }
 
+/**
+ * Guard potentially destructive actions with a confirmation dialog whenever the close
+ * request exceeds the user-visible threshold.
+ */
 function confirmBulkClose(count: number, message: string): boolean {
   if (count < CONFIRM_THRESHOLD) {
     return true;
@@ -219,6 +244,10 @@ function confirmBulkClose(count: number, message: string): boolean {
   return confirm(message);
 }
 
+/**
+ * Returns the first favicon found within a host by checking each cluster until one
+ * yields an icon URL. Falls back to an empty string so the caller clears the <img>.
+ */
 function findHostFavicon(host: HostNode): string {
   for (const cluster of host.children.values()) {
     const favicon = cluster.tabs[0]?.favIconUrl;

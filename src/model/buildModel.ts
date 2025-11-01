@@ -2,6 +2,10 @@ import { buildSubpath, deriveClusterKey, normalizeUrl, shouldIgnoreUrl, tryParse
 import { createClusterNode, createHostNode, createRootNode } from "./nodeFactory.js";
 import type { BuildOptions, RootNode, TabSummary } from "./types.js";
 
+/**
+ * Consumes the raw tab list, filters out unwanted entries, and aggregates the remainder
+ * into a hierarchical Root → Host → Cluster structure that the renderer expects.
+ */
 export function buildTabModel(
   tabs: readonly TabSummary[],
   { excludePinned = true, normalize = true, filter = "" }: BuildOptions = {}
@@ -43,6 +47,10 @@ export function buildTabModel(
   return root;
 }
 
+/**
+ * Retrieves an entry from a map, creating and storing it with the provided factory when
+ * the key is unseen. Keeps the model construction concise while avoiding duplicate nodes.
+ */
 function getOrCreate<K, V>(collection: Map<K, V>, key: K, factory: () => V): V {
   const existing = collection.get(key);
   if (existing) {
@@ -53,6 +61,10 @@ function getOrCreate<K, V>(collection: Map<K, V>, key: K, factory: () => V): V {
   return created;
 }
 
+/**
+ * Computes the aggregate counts for each node after tab assignment so the UI can display
+ * accurate badges without repeating the traversal on every render.
+ */
 function finalizeCounts(root: RootNode): void {
   for (const hostNode of root.children.values()) {
     for (const cluster of hostNode.children.values()) {

@@ -39,6 +39,11 @@ export function tryParseUrl(url: string): URL | null {
   }
 }
 
+/**
+ * Generates the display key for a cluster by inspecting the pathname and host.
+ * Special-cases GitHub repositories and AWS consoles/docs so related resources
+ * stay grouped together, otherwise it uses the first path segment.
+ */
 export function deriveClusterKey(url: URL): ClusterKey {
   const segments = url.pathname.split("/").filter(Boolean);
 

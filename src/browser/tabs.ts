@@ -1,5 +1,9 @@
 import type { TabSummary } from "../model/index.js";
 
+/**
+ * Fetches every open tab and normalises the subset of fields the model consumes so the
+ * rest of the pipeline can operate on a consistent, typed structure.
+ */
 export async function queryOpenTabs(): Promise<TabSummary[]> {
   const tabs = await browser.tabs.query({});
   return tabs

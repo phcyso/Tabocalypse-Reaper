@@ -23,6 +23,10 @@ function assignColor(variable: string, value: ThemeColorValue | null | undefined
   }
 }
 
+/**
+ * Pulls the active Firefox theme colors (when available) and maps them onto the popup's
+ * CSS variables so the extension mirrors the host browser chrome.
+ */
 export async function applyThemeFromBrowser(): Promise<void> {
   try {
     if (!browser.theme?.getCurrent) {
