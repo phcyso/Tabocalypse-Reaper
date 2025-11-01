@@ -8,7 +8,7 @@ import type { BuildOptions, RootNode, TabSummary } from "./types.js";
  */
 export function buildTabModel(
   tabs: readonly TabSummary[],
-  { excludePinned = true, normalize = true, filter = "" }: BuildOptions = {}
+  { excludePinned = true, filter = "" }: BuildOptions = {}
 ): RootNode {
   const root = createRootNode();
   const query = filter.trim().toLowerCase();
@@ -17,8 +17,8 @@ export function buildTabModel(
     if (excludePinned && tab.pinned) continue;
     if (!tab.url || shouldIgnoreUrl(tab.url)) continue;
 
-    const candidateUrl = normalize ? normalizeUrl(tab.url) : tab.url;
-    const parsedUrl = tryParseUrl(candidateUrl);
+    const normalizedUrl = normalizeUrl(tab.url);
+    const parsedUrl = tryParseUrl(normalizedUrl);
     if (!parsedUrl) continue;
 
     const haystack = `${parsedUrl.host} ${parsedUrl.pathname} ${tab.title ?? ""}`.toLowerCase();

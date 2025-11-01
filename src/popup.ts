@@ -6,18 +6,17 @@ import type { SortMode } from "./model/index.js";
 import { applyThemeFromBrowser } from "./theme/applyTheme.js";
 
 async function refresh(): Promise<void> {
-  const [excludePinned, normalize, filter, sortMode] = readUiState();
+  const [excludePinned, filter, sortMode] = readUiState();
   const tabs = await queryOpenTabs();
-  const model = buildTabModel(tabs, { excludePinned, normalize, filter });
+  const model = buildTabModel(tabs, { excludePinned, filter });
   renderTree(model, { sortMode, onRefresh: refresh });
 }
 
-function readUiState(): [boolean, boolean, string, SortMode] {
+function readUiState(): [boolean, string, SortMode] {
   const excludePinned = requireElement<HTMLInputElement>("#excludePinned").checked;
-  const normalize = requireElement<HTMLInputElement>("#normalize").checked;
   const filter = requireElement<HTMLInputElement>("#search").value;
   const sortSelect = requireElement<HTMLSelectElement>("#sort");
-  return [excludePinned, normalize, filter, coerceSortMode(sortSelect.value)];
+  return [excludePinned, filter, coerceSortMode(sortSelect.value)];
 }
 
 function coerceSortMode(value: string): SortMode {
@@ -34,10 +33,6 @@ function wireInteractionHandlers(): void {
   });
 
   requireElement<HTMLInputElement>("#excludePinned").addEventListener("change", () => {
-    void refresh();
-  });
-
-  requireElement<HTMLInputElement>("#normalize").addEventListener("change", () => {
     void refresh();
   });
 
