@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; img-src 'self' https: data: moz-extension:; style-src 'self' 'unsafe-inline';">
+  <title>Tabocalypse Reaper</title>
+  <link rel="stylesheet" href="file:///Users/kim/dev/Tabocalypse-Reaper/dist/popup.css">
+</head>
+<body>
+  <header class="brandbar">
+    <img src="file:///Users/kim/dev/Tabocalypse-Reaper/dist/logo.svg" class="brandLogo" alt="" />
+    <div class="brand">
+      <div class="brandName">Tabocalypse Reaper</div>
+      <div class="brandTag small">End your tab chaos with one clean sweep</div>
+    </div>
+    <div class="spacer"></div>
+    <select id="sort" title="Sort">
+      <option value="count">Count</option>
+      <option value="alpha">A→Z</option>
+    </select>
+  </header>
+
+  <section class="toolbar">
+    <input id="search" type="search" placeholder="Filter (host/path/title)" aria-label="Filter">
+    <label class="opt"><input type="checkbox" id="excludePinned" checked> Exclude pinned</label>
+    <button id="refresh">Refresh</button>
+    <span id="refreshHint" class="small" hidden>Refresh to re-sync order</span>
+  </section>
+
+  <div id="stats"></div>
+  <div id="tree" class="tree"></div>
+
+  <template id="hostTemplate">
+    <section class="hostCard">
+      <header class="hostHeader" tabindex="0" role="button" aria-expanded="false">
+        <span class="twisty" aria-hidden="true">▸</span>
+        <img class="ico hostIco" alt="" referrerpolicy="no-referrer" />
+        <span class="hostName"></span>
+        <span class="badge"></span>
+        <div class="spacer"></div>
+        <button class="close reapButton" title="Close all in host">Reap</button>
+      </header>
+      <div class="hostBody"></div>
+    </section>
+  </template>
+
+  <template id="clusterTemplate">
+    <div class="cluster">
+      <header class="clusterHeader" tabindex="0" role="button" aria-expanded="false">
+        <span class="twisty" aria-hidden="true">▸</span>
+        <img class="ico clusterIco" alt="" referrerpolicy="no-referrer" />
+        <span class="clusterName"></span>
+        <span class="badge small"></span>
+        <div class="spacer"></div>
+        <button class="close reapButton" title="Close cluster">Reap</button>
+      </header>
+      <div class="clusterBody"></div>
+    </div>
+  </template>
+
+  <template id="tabTemplate">
+    <div class="tab">
+      <img class="ico" alt="" referrerpolicy="no-referrer" />
+      <span class="clusterTag small" hidden></span>
+      <a class="title" target="_self"></a>
+      <span class="path small"></span>
+      <button class="x" title="Close tab">✕</button>
+    </div>
+  </template>
+
+  <script>
+  const __tabs = [{"id":1,"url":"https://duckduckgo.com/?q=typescript","title":"typescript cli at DuckDuckGo","pinned":false,"windowId":1,"favIconUrl":""},{"id":2,"url":"https://duckduckgo.com/?q=Noraly%20Schoenmaker","title":"Noraly Schoenmaker at DuckDuckGo","pinned":false,"windowId":1,"favIconUrl":""},{"id":3,"url":"https://chatgpt.com/","title":"ChatGPT","pinned":false,"windowId":1,"favIconUrl":""},{"id":4,"url":"https://www.reddit.com/r/typescript/comments/xyz","title":"reddit tab","pinned":false,"windowId":1,"favIconUrl":""},{"id":5,"url":"https://k3s.io/docs","title":"k3s docs","pinned":false,"windowId":1,"favIconUrl":""},{"id":6,"url":"https://safetyculture.com/","title":"SafetyCulture","pinned":false,"windowId":1,"favIconUrl":""},{"id":7,"url":"https://duckduckgo.com/?q=extra+search","title":"Additional DuckDuckGo Search","pinned":false,"windowId":1,"favIconUrl":""},{"id":8,"url":"https://duckduckgo.com/?q=search+two","title":"Second Duck Search","pinned":false,"windowId":1,"favIconUrl":""}];
+  window.browser = {
+    tabs: {
+      async query() { return JSON.parse(JSON.stringify(__tabs)); },
+      async remove(ids) { console.info("stub remove", ids); },
+      async update(id, info) { console.info("stub update", id, info); }
+    },
+    theme: {
+      async getCurrent() { return {}; }
+    }
+  };
+</script><script type="module" src="file:///Users/kim/dev/Tabocalypse-Reaper/dist/popup.js"></script>
+</body>
+</html>

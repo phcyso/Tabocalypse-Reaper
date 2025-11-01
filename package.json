@@ -13,6 +13,7 @@
     "lint": "npm run typecheck && npm run test && npm run prepare && web-ext lint --source-dir dist",
     "test": "vitest run",
     "test:watch": "vitest watch",
+    "verify:popup": "npm run prepare && node scripts/build-popup-harness.mjs && npm run test",
     "dev": "npm run prepare && npm-run-all --parallel watch:ts watch:assets web-ext:run",
     "watch:ts": "tsc --project tsconfig.json --watch --preserveWatchOutput",
     "watch:assets": "node scripts/watch-assets.mjs",
