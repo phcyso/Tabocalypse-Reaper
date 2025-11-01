@@ -137,8 +137,13 @@ function render(root) {
 
     name.textContent = h.name;
     badge.textContent = formatCount(h.count);
-    body.hidden = true;
-    header.setAttribute("aria-expanded", "false");
+    const hostHasSingleCluster = h.children.size === 1;
+    const hostCollapsible = h.count > 1;
+    const hostStartsExpanded = hostHasSingleCluster || !hostCollapsible;
+
+    body.hidden = !hostStartsExpanded;
+    header.setAttribute("aria-expanded", hostStartsExpanded ? "true" : "false");
+    twisty.textContent = hostStartsExpanded ? "▾" : "▸";
 
     // Set host icon: use first available favicon from any tab in the host
     let hostFavicon = "";
@@ -160,8 +165,6 @@ function render(root) {
       await refresh();
     });
 
-    const hostHasSingleCluster = h.children.size === 1;
-    const hostCollapsible = !hostHasSingleCluster;
     if (hostCollapsible) {
       const toggleHost = () => {
         body.hidden = !body.hidden;
@@ -241,6 +244,7 @@ function render(root) {
       }
 
       const cfrag = clusterTpl.content.cloneNode(true);
+      const cwrapper = cfrag.querySelector(".cluster");
       const cheader = cfrag.querySelector(".clusterHeader");
       const cname = cfrag.querySelector(".clusterName");
       const cbadge = cfrag.querySelector(".badge");
@@ -248,6 +252,10 @@ function render(root) {
       const cclose = cfrag.querySelector(".close");
       const cbody = cfrag.querySelector(".clusterBody");
       const cico = cfrag.querySelector(".clusterIco");
+
+      if (hostHasSingleCluster) {
+        cwrapper.classList.add("clusterSolo");
+      }
       cname.textContent = c.name;
       cbadge.textContent = formatCount(c.count);
       cbody.hidden = true;
@@ -268,7 +276,7 @@ function render(root) {
         await refresh();
       });
 
-      const clusterCollapsible = c.tabs.length > 1;
+      const clusterCollapsible = c.tabs.length > 1 && !hostHasSingleCluster;
       if (clusterCollapsible) {
         const toggleCluster = () => {
           cbody.hidden = !cbody.hidden;
@@ -288,12 +296,6 @@ function render(root) {
             toggleCluster();
           }
         });
-
-        if (hostHasSingleCluster) {
-          cbody.hidden = false;
-          cheader.setAttribute("aria-expanded", "true");
-          ctwisty.textContent = "▾";
-        }
       } else {
         cbody.hidden = false;
         cheader.setAttribute("aria-expanded", "true");

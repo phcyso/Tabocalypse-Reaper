@@ -68,6 +68,9 @@ body{ font: 12px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubun
 .clusterInline{ border-left:none; margin:6px 0 10px 0; padding-left:0; }
 .clusterInlineHeader{ cursor:default; padding:0; }
 .clusterInline .clusterBody{ margin-top:2px; }
+.clusterSolo{ border-left:none; margin:4px 0 10px 0; padding-left:0; }
+.clusterSolo .clusterHeader{ padding:4px 0; }
+.clusterSolo .clusterHeader .badge{ margin-left:0; }
 .tab{ display:flex; align-items:center; gap:8px; padding:4px 6px; border-radius:8px; }
 .tab:hover{ background:rgba(124,58,237,0.08); }
 .tab .x{ border:none; background:transparent; color:var(--accent); cursor:pointer; font-size:12px; }
