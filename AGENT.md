@@ -8,8 +8,8 @@ Purpose: Firefox WebExtension (manifest v2) that groups open tabs Host → Clust
 ## Function Contracts
 - `queryOpenTabs()`: returns light array of tab objects (id, url, title, pinned, windowId, favIconUrl).
 - `buildTabModel(tabs, { excludePinned, normalize, filter })`: builds root node with `children` (Map host→node), each host node has cluster nodes; computes counts and ID sets.
-- `renderTree(root, { sortMode, onRefresh })`: clones templates (`#hostTemplate`, `#clusterTemplate`, `#tabTemplate`), sorts (count or alpha), wires handlers (twisty, reap, tab activate).
-- `refresh()`: reads UI state (checkboxes, search, sort), calls above.
+- `renderTree(root, { onRefresh })`: clones templates (`#hostTemplate`, `#clusterTemplate`, `#tabTemplate`), sorts hosts/clusters by tab count, wires handlers (twisty, reap, tab activate).
+- `refresh()`: reads UI state (checkboxes, search), calls above.
 
 ## Data Model Shape
 Node: `{ name, kind: 'root'|'host'|'cluster', children: Map, tabs: [], ids: Set, count }`.
@@ -29,7 +29,7 @@ Host count = unique tab IDs across its clusters. Cluster count = `tabs.length`.
 - Use `<template>` cloning; avoid `innerHTML` mass string ops.
 - Shallow hierarchy (Host → Cluster only) to keep DOM light.
 - Bulk close via `browser.tabs.remove([...ids])` (host or cluster). Confirm if ≥10 (`CONFIRM_THRESHOLD`).
-- Sort hosts/clusters by count (default) or alpha; tabs inside cluster sorted by title.
+- Sort hosts/clusters by count; tabs inside cluster sorted by title.
 
 ## Icon Logic
 - **Host icons**: Display favicon from first available tab in the host (searches through clusters until a favicon is found). Falls back to empty/placeholder if no favicon available.
