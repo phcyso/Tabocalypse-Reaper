@@ -1,2 +1,4 @@
 dist/
+web-ext-artifacts/
+tabocalypse-reaper.zip
 node_modules/

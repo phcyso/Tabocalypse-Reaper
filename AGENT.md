@@ -1,9 +1,9 @@
 # Tabocalypse Reaper – Agent Quick Guide
 
-Purpose: Firefox WebExtension (manifest v2) that groups open tabs Host → Cluster for fast bulk closing and navigation. Single‑file logic (`popup.js`). No build step.
+Purpose: Firefox WebExtension (manifest v2) that groups open tabs Host → Cluster for fast bulk closing and navigation. Source now lives in `src/` with TypeScript entry point (`popup.ts`). Compile to `dist/` with `npm run prepare` before handing the directory to `web-ext`.
 
 ## Core Cycle
-`pullTabs()` → `buildModel()` → `render()`; user actions call `refresh()` (re-runs cycle).
+`pullTabs()` → `buildModel()` → `render()`; user actions call `refresh()` (re-runs cycle). Keep this flow typed—prefer explicit interfaces over `any` so the compiler guards the model invariants.
 
 ## Function Contracts
 - `pullTabs()`: returns light array of tab objects (id, url, title, pinned, windowId, favIconUrl).
@@ -47,10 +47,15 @@ Search box matches lowercased concatenation: `host pathname title`. Schemes excl
 Twisty buttons toggle bodies (`▸` / `▾`). "Reap" buttons trigger bulk close; single tab close uses `✕` button; clicking title focuses tab via `browser.tabs.update(id,{active:true})` instead of navigation.
 
 ## Extension Specifics
-Manifest v2 uses `browser_action`. Permissions: `tabs`, `storage` (future), `theme`. CSP in `popup.html` allows favicons `img-src 'self' https: data: moz-extension:`.
+Manifest v2 uses `browser_action`. Permissions: `tabs`, `storage` (future), `theme`. CSP in `src/popup.html` allows favicons `img-src 'self' https: data: moz-extension:`.
+
+## Source + Build Layout
+- Author changes inside `src/`; `dist/` is disposable output and should stay untracked.
+- `npm run prepare` = clean (`rimraf dist/`) + TypeScript build + static asset copy. `npm run build` wraps that and calls `web-ext build --source-dir dist`.
+- `npm run dev` runs the TypeScript compiler and asset copier in watch mode alongside `web-ext run --source-dir dist`.
 
 ## Local Run
-Load temporary add-on: Firefox → `about:debugging#/runtime/this-firefox` → "Load Temporary Add-on…" → select `manifest.json`.
+Load temporary add-on: Firefox → `about:debugging#/runtime/this-firefox` → "Load Temporary Add-on…" → select `dist/manifest.json` after running `npm run prepare`.
 
 ## Safe Changes Guidelines
 Preserve node shape; update counts after modifying clustering or filters. For new clustering, adjust only `clusterFor()`. Keep bulk operations array-based. Wrap tab ops in try/catch (already pattern).
