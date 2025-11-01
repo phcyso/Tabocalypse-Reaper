@@ -95,6 +95,33 @@ function render(root) {
   const tabTpl = /** @type {HTMLTemplateElement} */ ($$("#tabTemplate"));
   const sortMode = $$("#sort").value;
 
+  const formatCount = (count) => `${count} tab${count === 1 ? "" : "s"}`;
+  const buildTabList = (tabs) => {
+    const list = document.createElement("div");
+    for (const t of tabs) {
+      const tfrag = tabTpl.content.cloneNode(true);
+      const x = tfrag.querySelector(".x");
+      const a = tfrag.querySelector(".title");
+      const ico = tfrag.querySelector(".ico");
+      const path = tfrag.querySelector(".path");
+      a.textContent = t.title;
+      a.href = t.url;
+      path.textContent = t.subpath || "";
+      if (t.favIconUrl) ico.src = t.favIconUrl;
+      x.addEventListener("click", async (e)=>{
+        e.stopPropagation();
+        try { await browser.tabs.remove(t.id); } catch {}
+        await refresh();
+      });
+      a.addEventListener("click", (e)=>{
+        e.preventDefault();
+        browser.tabs.update(t.id, { active: true });
+      });
+      list.appendChild(tfrag);
+    }
+    return list;
+  };
+
   let hosts = [...root.children.values()];
   hosts.sort((a,b)=> sortMode==="alpha" ? a.name.localeCompare(b.name) : b.count-a.count);
 
@@ -109,7 +136,7 @@ function render(root) {
     const ico = frag.querySelector(".hostIco");
 
     name.textContent = h.name;
-    badge.textContent = h.count;
+    badge.textContent = formatCount(h.count);
     body.hidden = true;
     header.setAttribute("aria-expanded", "false");
 
@@ -123,12 +150,6 @@ function render(root) {
     }
     if (hostFavicon) ico.src = hostFavicon;
 
-    const toggleHost = () => {
-      body.hidden = !body.hidden;
-      twisty.textContent = body.hidden ? "▸" : "▾";
-      header.setAttribute("aria-expanded", body.hidden ? "false" : "true");
-    };
-
     closeBtn.addEventListener("click", async (e)=>{
       e.stopPropagation();
       const idsArr = Array.from(h.ids);
@@ -139,18 +160,35 @@ function render(root) {
       await refresh();
     });
 
-    header.addEventListener("click", (e)=>{
-      if (e.target.closest && e.target.closest(".close")) return;
-      toggleHost();
-    });
-
-    header.addEventListener("keydown", (e)=>{
-      if (e.target !== header) return;
-      if (e.key === "Enter" || e.key === " " || e.key === "Spacebar" || e.key === "Space") {
-        e.preventDefault();
+    const hostCollapsible = h.children.size > 1;
+    if (hostCollapsible) {
+      const toggleHost = () => {
+        body.hidden = !body.hidden;
+        twisty.textContent = body.hidden ? "▸" : "▾";
+        header.setAttribute("aria-expanded", body.hidden ? "false" : "true");
+      };
+      header.addEventListener("click", (e)=>{
+        if (e.target.closest && e.target.closest(".close")) return;
         toggleHost();
-      }
-    });
+      });
+
+      header.addEventListener("keydown", (e)=>{
+        if (e.target !== header) return;
+        if (e.key === "Enter" || e.key === " " || e.key === "Spacebar" || e.key === "Space") {
+          e.preventDefault();
+          toggleHost();
+        }
+      });
+    } else {
+      body.hidden = false;
+      header.setAttribute("aria-expanded", "true");
+      header.classList.add("isStatic");
+      twisty.classList.add("twistyHidden");
+      twisty.textContent = "▾";
+      header.removeAttribute("role");
+      header.removeAttribute("tabindex");
+      header.setAttribute("aria-disabled", "true");
+    }
 
     let clusters = [...h.children.values()];
     clusters.sort((a,b)=> sortMode==="alpha" ? a.name.localeCompare(b.name) : b.count-a.count);
@@ -164,7 +202,7 @@ function render(root) {
       const cbody = cfrag.querySelector(".clusterBody");
       const cico = cfrag.querySelector(".clusterIco");
       cname.textContent = c.name;
-      cbadge.textContent = c.count;
+      cbadge.textContent = formatCount(c.count);
       cbody.hidden = true;
       cheader.setAttribute("aria-expanded", "false");
 
@@ -172,12 +210,6 @@ function render(root) {
       if (c.tabs.length > 0 && c.tabs[0].favIconUrl) {
         cico.src = c.tabs[0].favIconUrl;
       }
-
-      const toggleCluster = () => {
-        cbody.hidden = !cbody.hidden;
-        ctwisty.textContent = cbody.hidden ? "▸" : "▾";
-        cheader.setAttribute("aria-expanded", cbody.hidden ? "false" : "true");
-      };
 
       cclose.addEventListener("click", async (e)=>{
         e.stopPropagation();
@@ -189,41 +221,39 @@ function render(root) {
         await refresh();
       });
 
-      cheader.addEventListener("click", (e)=>{
-        if (e.target.closest && e.target.closest(".close")) return;
-        toggleCluster();
-      });
+      const clusterCollapsible = c.tabs.length > 1;
+      if (clusterCollapsible) {
+        const toggleCluster = () => {
+          cbody.hidden = !cbody.hidden;
+          ctwisty.textContent = cbody.hidden ? "▸" : "▾";
+          cheader.setAttribute("aria-expanded", cbody.hidden ? "false" : "true");
+        };
 
-      cheader.addEventListener("keydown", (e)=>{
-        if (e.target !== cheader) return;
-        if (e.key === "Enter" || e.key === " " || e.key === "Spacebar" || e.key === "Space") {
-          e.preventDefault();
+        cheader.addEventListener("click", (e)=>{
+          if (e.target.closest && e.target.closest(".close")) return;
           toggleCluster();
-        }
-      });
+        });
 
-      const list = document.createElement("div");
-      for (const t of c.tabs.slice().sort((a,b)=> (a.title||"").localeCompare(b.title||""))) {
-        const tfrag = tabTpl.content.cloneNode(true);
-        const x = tfrag.querySelector(".x");
-        const a = tfrag.querySelector(".title");
-        const ico = tfrag.querySelector(".ico");
-        const path = tfrag.querySelector(".path");
-        a.textContent = t.title;
-        a.href = t.url;
-        path.textContent = t.subpath || "";
-        if (t.favIconUrl) ico.src = t.favIconUrl;
-        x.addEventListener("click", async (e)=>{
-          e.stopPropagation();
-          try { await browser.tabs.remove(t.id); } catch {}
-          await refresh();
+        cheader.addEventListener("keydown", (e)=>{
+          if (e.target !== cheader) return;
+          if (e.key === "Enter" || e.key === " " || e.key === "Spacebar" || e.key === "Space") {
+            e.preventDefault();
+            toggleCluster();
+          }
         });
-        a.addEventListener("click", (e)=>{
-          e.preventDefault();
-          browser.tabs.update(t.id, { active: true });
-        });
-        list.appendChild(tfrag);
+      } else {
+        cbody.hidden = false;
+        cheader.setAttribute("aria-expanded", "true");
+        cheader.classList.add("isStatic");
+        ctwisty.classList.add("twistyHidden");
+        ctwisty.textContent = "▾";
+        cheader.removeAttribute("role");
+        cheader.removeAttribute("tabindex");
+        cheader.setAttribute("aria-disabled", "true");
       }
+
+      const sortedTabs = c.tabs.slice().sort((a,b)=> (a.title||"").localeCompare(b.title||""));
+      const list = buildTabList(sortedTabs);
       cbody.appendChild(list);
       body.appendChild(cfrag);
     }
