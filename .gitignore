@@ -4,6 +4,9 @@ tabocalypse-reaper.zip
 node_modules/
 test-screenshots/
 scratch/
+artifacts/
+core
+core.*
 
 # generated screenshot suites (regenerate: docker/shoot.py + make-amo.py)
 artifacts/

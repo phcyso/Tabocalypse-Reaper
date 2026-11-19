@@ -674,12 +674,26 @@ def act_reap_host(ch, params):
 
 
 def confirm_dialog_action(ch, accept=True):
-    """Accept/dismiss the tab-modal confirm dialog. OK is the default button,
-    so Return accepts and Escape cancels."""
-    key = "Return" if accept else "Escape"
-    subprocess.run(["xdotool", "key", "--clearmodifiers", key], check=False)
+    """Accept/dismiss the in-popup confirm modal. Primary path: click the
+    modal button via the popup DOM (works without X keyboard focus). Fallback:
+    the modal also handles Enter (accept) / Escape (cancel) for real users."""
+    selector = ".confirmOk" if accept else ".confirmCancel"
+    res = ch.popup_eval(f"""
+        (function () {{
+            const doc = content.document;
+            const btn = doc.querySelector('{selector}');
+            if (!btn) {{ sendAsyncMessage('reaper/result',
+                {{error: 'modal button {selector} not found'}}); return; }}
+            btn.click();
+            sendAsyncMessage('reaper/result', {{clicked: '{selector}'}});
+        }})();
+    """)
+    if res.get("error"):
+        key = "Return" if accept else "Escape"
+        subprocess.run(["xdotool", "key", "--clearmodifiers", key], check=False)
+        res["fallbackKey"] = key
     time.sleep(1.2)
-    return {"pressed": key}
+    return res
 
 
 def act_tab_count(ch):
