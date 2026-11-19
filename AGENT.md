@@ -29,7 +29,7 @@ Host count = unique tab IDs across its clusters. Cluster count = `tabs.length`.
 ## Rendering & Performance Patterns
 - Use `<template>` cloning; avoid `innerHTML` mass string ops.
 - Shallow hierarchy (Host → Cluster only) to keep DOM light.
-- Bulk close via `browser.tabs.remove([...ids])` (host or cluster). Confirm if ≥10 (`CONFIRM_THRESHOLD`).
+- Bulk close via `browser.tabs.remove([...ids])`. Confirm if ≥10 (`CONFIRM_THRESHOLD`) using the in-popup themed modal (`showConfirmDialog` in `dom/render.ts`) — NOT native `confirm()`; it previews the affected tab titles. Single-tab ✕ closes **optimistically** (row removed instantly, `onRefresh` resyncs on API failure). Scroll bottom fade is the static `.treeFade` overlay — never put `mask-image` on the scrolling `.tree` (ghost-arc artifact).
 - Sort hosts/clusters by count (default) or alpha; tabs inside cluster sorted by title.
 
 ## Icon Logic

@@ -201,7 +201,16 @@ function decorateHost(
         closeButton.disabled = false;
         return;
       }
-      if (!confirmBulkClose(reapIds.length, `Reap ${reapIds.length} tabs under “${host.name}”?`)) {
+      if (
+        !(await confirmBulkClose({
+          count: reapIds.length,
+          title: `Reap ${reapIds.length} tabs under “${host.name}”?`,
+          meta: pinnedCount > 0 ? `${pinnedCount} pinned tab${pinnedCount === 1 ? "" : "s"} survive.` : undefined,
+          tabs: reapIds
+            .map((id) => kit.tabsById.get(id))
+            .filter((tab): tab is ClusterTab => Boolean(tab)),
+        }))
+      ) {
         closeButton.disabled = false;
         return;
       }
@@ -239,10 +248,13 @@ function decorateHost(
       async () => {
         const staleIds = staleTabs.map((tab) => tab.id);
         if (
-          !confirmBulkClose(
-            staleIds.length,
-            `Reap ${staleIds.length} stale tabs (older than ${STALE_LABEL}) under “${host.name}”?`
-          )
+          !(await confirmBulkClose({
+            count: staleIds.length,
+            title: `Reap ${staleIds.length} stale tabs under “${host.name}”?`,
+            meta: `Older than ${STALE_LABEL} · pinned survive.`,
+            listLabel: `Stale tabs (older than ${STALE_LABEL})`,
+            tabs: staleTabs,
+          }))
         ) {
           staleButton.disabled = false;
           return;
@@ -272,10 +284,15 @@ function decorateHost(
       async () => {
         const dupIds = kit.closableDups;
         if (
-          !confirmBulkClose(
-            dupIds.length,
-            `Close ${dupIds.length} duplicate tabs under “${host.name}”? Newest copies stay.`
-          )
+          !(await confirmBulkClose({
+            count: dupIds.length,
+            title: `Close ${dupIds.length} duplicate tabs under “${host.name}”?`,
+            meta: "Newest copies stay.",
+            listLabel: "Duplicate tabs being closed",
+            tabs: dupIds
+              .map((id) => kit.tabsById.get(id))
+              .filter((tab): tab is ClusterTab => Boolean(tab)),
+          }))
         ) {
           dupButton.disabled = false;
           return;
@@ -398,18 +415,16 @@ function decorateSolo(
   applyRowWindowChip(winChip, tab, decor);
 
   guardCloseButton(closeButton, async () => {
+    // Optimistic close, same rationale as the per-tab ✕ above: the whole host
+    // row disappears instantly, and a failed close resyncs via onRefresh.
+    handleHostRemoval(hostKey, host, row);
     try {
       await closeTab(tab.id);
     } catch (error) {
       console.error(error);
-      closeButton.disabled = false;
       await context.onRefresh();
       return;
     }
-
-    // The whole host went with the tab: reuse the host-removal cascade so stats,
-    // empty state and stale hints all stay coherent.
-    handleHostRemoval(hostKey, host, row);
   });
 
   anchor.addEventListener("click", (event) => {
@@ -512,10 +527,14 @@ function decorateCluster(
           return;
         }
         if (
-          !confirmBulkClose(
-            reapIds.length,
-            `Reap ${reapIds.length} tabs under “${host.name} / ${cluster.name}”?`
-          )
+          !(await confirmBulkClose({
+            count: reapIds.length,
+            title: `Reap ${reapIds.length} tabs under “${host.name} / ${cluster.name}”?`,
+            meta: pinnedCount > 0 ? `${pinnedCount} pinned tab${pinnedCount === 1 ? "" : "s"} survive.` : undefined,
+            tabs: reapIds
+              .map((id) => kit.tabsById.get(id))
+              .filter((tab): tab is ClusterTab => Boolean(tab)),
+          }))
         ) {
           closeButton.disabled = false;
           return;
@@ -629,15 +648,9 @@ function decorateTab(
   }
 
   guardCloseButton(closeButton, async () => {
-    try {
-      await closeTab(tab.id);
-    } catch (error) {
-      console.error(error);
-      closeButton.disabled = false;
-      await context.onRefresh();
-      return;
-    }
-
+    // Optimistic close (user feedback 2026-11: the API roundtrip + full refresh
+    // made ✕ feel laggy at 100+ tabs): drop the row and cascade the model NOW,
+    // then persist. On failure the full refresh resyncs the visible state.
     handleTabRemoval(
       hostKey,
       host,
@@ -648,6 +661,13 @@ function decorateTab(
       hostBadge,
       clusterBadge
     );
+    try {
+      await closeTab(tab.id);
+    } catch (error) {
+      console.error(error);
+      await context.onRefresh();
+      return;
+    }
   });
 
   anchor.addEventListener("click", (event) => {
@@ -1151,14 +1171,119 @@ function formatStats(count: number): string {
 }
 
 /**
- * Guard potentially destructive actions with a confirmation dialog whenever the close
- * request exceeds the user-visible threshold.
+ * Guard potentially destructive actions with a confirmation dialog whenever the
+ * close request exceeds the user-visible threshold. The dialog is an in-popup
+ * themed modal (not native confirm()) so it can show WHICH tabs are about to
+ * close — user feedback 2026-11.
  */
-function confirmBulkClose(count: number, message: string): boolean {
-  if (count < CONFIRM_THRESHOLD) {
+interface ConfirmCloseOptions {
+  count: number;
+  title: string;
+  /** Secondary line, e.g. "Pinned tabs survive." */
+  meta?: string;
+  /** The tabs being closed — the dialog previews up to PREVIEW_LIMIT titles. */
+  tabs?: ClusterTab[];
+  /** Override for the list heading; defaults to "Tabs being closed". */
+  listLabel?: string;
+}
+
+const PREVIEW_LIMIT = 8;
+
+async function confirmBulkClose(options: ConfirmCloseOptions): Promise<boolean> {
+  if (options.count < CONFIRM_THRESHOLD) {
     return true;
   }
-  return confirm(message);
+  return showConfirmDialog(options);
+}
+
+function showConfirmDialog(options: ConfirmCloseOptions): Promise<boolean> {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "confirmOverlay";
+
+    const card = document.createElement("div");
+    card.className = "confirmCard";
+    card.setAttribute("role", "dialog");
+    card.setAttribute("aria-modal", "true");
+    card.setAttribute("aria-labelledby", "confirmTitle");
+
+    const title = document.createElement("div");
+    title.id = "confirmTitle";
+    title.className = "confirmTitle";
+    title.textContent = options.title;
+
+    const meta = document.createElement("div");
+    meta.className = "confirmMeta small";
+    meta.textContent =
+      options.meta ?? `${options.count} tab${options.count === 1 ? "" : "s"} will be closed.`;
+
+    card.append(title, meta);
+
+    const tabs = options.tabs ?? [];
+    if (tabs.length > 0) {
+      const label = document.createElement("div");
+      label.className = "confirmListLabel small";
+      label.textContent = options.listLabel ?? "Tabs being closed";
+      card.append(label);
+
+      const list = document.createElement("ul");
+      list.className = "confirmList";
+      const preview = tabs.slice(0, PREVIEW_LIMIT);
+      for (const tab of preview) {
+        const item = document.createElement("li");
+        item.textContent = (tab.pinned ? "📌 " : "") + tab.title;
+        item.title = tab.url;
+        list.append(item);
+      }
+      if (tabs.length > preview.length) {
+        const more = document.createElement("li");
+        more.className = "small";
+        more.textContent = `… and ${tabs.length - preview.length} more`;
+        list.append(more);
+      }
+      card.append(list);
+    }
+
+    const actions = document.createElement("div");
+    actions.className = "confirmActions";
+    const cancel = document.createElement("button");
+    cancel.className = "confirmCancel";
+    cancel.textContent = "Cancel";
+    const ok = document.createElement("button");
+    ok.className = "confirmOk";
+    ok.textContent = `Reap ${options.count}`;
+    actions.append(cancel, ok);
+    card.append(actions);
+
+    const finish = (result: boolean) => {
+      document.removeEventListener("keydown", onKey, true);
+      overlay.remove();
+      resolve(result);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        finish(false);
+      } else if (event.key === "Enter") {
+        event.preventDefault();
+        event.stopPropagation();
+        finish(true);
+      }
+    };
+    overlay.addEventListener("click", (event) => {
+      if (event.target === overlay) {
+        finish(false);
+      }
+    });
+    cancel.addEventListener("click", () => finish(false));
+    ok.addEventListener("click", () => finish(true));
+    document.addEventListener("keydown", onKey, true);
+
+    overlay.append(card);
+    document.body.append(overlay);
+    ok.focus();
+  });
 }
 
 /**

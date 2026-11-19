@@ -390,6 +390,11 @@ describe("renderTree incremental updates", () => {
     reap!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     reap!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 
+    // The close action now awaits the (async) confirm gate — one microtask of
+    // slack before the below-threshold path reaches closeTabs.
+    await Promise.resolve();
+    await Promise.resolve();
+
     expect(closeTabs).toHaveBeenCalledTimes(1);
     expect(reap!.disabled).toBe(true);
 

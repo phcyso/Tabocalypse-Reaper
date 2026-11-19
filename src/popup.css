@@ -45,14 +45,17 @@
 html, body{ height: 100%; }
 /* Figure-ground (review A7): theme-aware 1px outline keeps the popup readable on
    white pages (light), dark pages (dark) and purple chrome (purple). */
-body{ font: 12px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif; width: 580px; margin:0; color:var(--text); background:var(--bg); border:1px solid color-mix(in srgb, var(--text) 30%, transparent); }
+/* Flex column + overflow:hidden (user feedback 2026-11): the tree exactly fills
+   the space below the toolbar, so no unstyled body backdrop can peek out below
+   the list at 100+ tabs (the "second background" band). */
+body{ font: 12px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif; width: 580px; margin:0; color:var(--text); background:var(--bg); border:1px solid color-mix(in srgb, var(--text) 30%, transparent); display:flex; flex-direction:column; overflow:hidden; position:relative; }
 
-.brandbar{ display:flex; gap:10px; align-items:center; padding:10px 12px; border-bottom:1px solid var(--line); background:linear-gradient(90deg, rgba(124,58,237,0.12), transparent 45%), color-mix(in srgb, var(--accent) 5%, var(--bg)); }
+.brandbar{ display:flex; gap:10px; align-items:center; padding:10px 12px; border-bottom:1px solid var(--line); background:linear-gradient(90deg, rgba(124,58,237,0.12), transparent 45%), color-mix(in srgb, var(--accent) 5%, var(--bg)); flex-shrink:0; }
 .brandLogo{ width:24px; height:24px; border-radius:6px; }
 .brandName{ font-weight:800; letter-spacing:0.2px; }
 .brandTag{ color:var(--muted); }
 
-.toolbar{ display:flex; gap:8px; align-items:center; padding:8px 12px; border-bottom:1px dashed var(--line); position:sticky; top:0; background:var(--bg); z-index:3; }
+.toolbar{ display:flex; gap:8px; align-items:center; padding:8px 12px; border-bottom:1px dashed var(--line); position:sticky; top:0; background:var(--bg); z-index:3; flex-shrink:0; }
 #search{ flex:1; min-width:0; padding:6px 10px; border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--text); }
 .opt{ font-size:11px; color:var(--muted); white-space:nowrap; }
 /* Themed checkbox states (review A5): accent-filled when checked, visible themed
@@ -64,10 +67,19 @@ body{ font: 12px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubun
 /* "Sort outdated" pill (review A9): accent-tinted, clickable, hard to miss. */
 #refreshHint{ border:1px solid var(--accent); color:var(--accent); background:color-mix(in srgb, var(--accent) 12%, var(--card)); border-radius:999px; padding:3px 10px; font-size:11px; font-weight:600; white-space:nowrap; cursor:pointer; }
 
-#stats{ padding:6px 12px; color:var(--muted); border-bottom:1px dashed var(--line); background:var(--bg); }
-/* Min-height keeps the popup from yo-yo-ing between sliver and full (review A2);
-   the bottom fade + scroll padding stop rows amputating at the panel edge (A6). */
-.tree{ padding:8px 10px 30px 10px; min-height:400px; max-height: 640px; overflow:auto; scroll-padding-bottom:16px; mask-image:linear-gradient(180deg, #000 calc(100% - 30px), transparent); }
+#stats{ padding:6px 12px; color:var(--muted); border-bottom:1px dashed var(--line); background:var(--bg); flex-shrink:0; }
+/* Flex-fills the popup below the toolbar (user feedback 2026-11): no fixed
+   max-height, so the list always reaches the bottom of the panel and the body
+   backdrop can never show below it (the "second background" band). The bottom
+   fade moved from mask-image to a static overlay (.treeFade) — the mask
+   repainted against scrolling content and produced ghost "second background"
+   arcs near the end of the scroll. */
+.tree{ padding:8px 10px 30px 10px; min-height:400px; flex:1 1 auto; overflow:auto; scroll-padding-bottom:16px; }
+/* Static bottom fade (replaces the mask): sits over the visible bottom edge of
+   the scroller, never scrolls with the content, ignores pointer events. */
+.treeFade{ position:absolute; left:0; right:0; bottom:0; height:30px; pointer-events:none; background:linear-gradient(180deg, transparent, var(--bg) 88%); z-index:2; }
+/* Trim the trailing margin so the fade lands on the last card, not on a gap. */
+#tree > :last-child{ margin-bottom:8px; }
 
 .hostCard{ border:1px solid var(--line); border-radius:14px; background:var(--card); margin:10px 0; overflow:hidden; box-shadow:0 1px 3px color-mix(in srgb, var(--text) 10%, transparent); }
 .hostHeader{ display:flex; align-items:center; gap:8px; padding:10px; background:rgba(124,58,237,0.05); cursor:pointer; }
@@ -142,6 +154,22 @@ body{ font: 12px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubun
 .toast{ position:fixed; left:50%; bottom:14px; transform:translateX(-50%); display:flex; align-items:center; gap:10px; padding:7px 8px 7px 14px; border-radius:999px; background:var(--accent-strong); color:var(--accent-contrast); font-weight:600; box-shadow:0 10px 28px rgba(0,0,0,0.45); z-index:60; }
 .toastAction{ border:none; background:rgba(255,255,255,0.2); color:inherit; font-weight:700; border-radius:999px; padding:3px 12px; cursor:pointer; }
 .toastAction:hover{ background:rgba(255,255,255,0.32); }
+
+/* In-popup confirm modal (user feedback 2026-11): replaces native confirm() so
+   the dialog can show exactly which tabs are about to be reaped, themed by the
+   same CSS vars as the rest of the popup. */
+.confirmOverlay{ position:fixed; inset:0; z-index:50; display:flex; align-items:center; justify-content:center; background:rgba(8,6,18,0.5); padding:14px; }
+.confirmCard{ width:100%; max-width:420px; max-height:100%; display:flex; flex-direction:column; gap:6px; padding:14px 16px; border:1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); border-radius:14px; background:var(--card); color:var(--text); box-shadow:0 12px 32px rgba(0,0,0,0.5); }
+.confirmTitle{ font-weight:800; font-size:13px; }
+.confirmListLabel{ text-transform:uppercase; letter-spacing:0.08em; margin-top:2px; }
+.confirmList{ margin:2px 0 0 0; padding:4px 0; list-style:none; overflow:auto; min-height:0; border-top:1px dashed var(--line); border-bottom:1px dashed var(--line); }
+.confirmList li{ padding:2px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.confirmActions{ display:flex; gap:8px; justify-content:flex-end; margin-top:4px; }
+.confirmCancel{ padding:5px 12px; border-radius:999px; border:1px solid var(--line); background:transparent; color:var(--text); cursor:pointer; }
+.confirmCancel:hover{ border-color:var(--accent); color:var(--accent); }
+.confirmOk{ padding:5px 14px; border-radius:999px; border:1px solid var(--accent-strong); background:var(--accent-strong); color:var(--accent-contrast); font-weight:700; cursor:pointer; }
+.confirmOk:hover{ background:var(--accent-strong-active); border-color:var(--accent-strong-active); }
+.confirmOk:focus-visible{ outline:none; box-shadow:0 0 0 2px var(--bg), 0 0 0 4px var(--accent-2); }
 
 .small{ color:var(--muted); font-size:11px; }
 .spacer{ flex:1; }
