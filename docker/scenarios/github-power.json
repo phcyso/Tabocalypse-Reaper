@@ -1,0 +1,10 @@
+{
+  "name": "github-power",
+  "title": "GitHub Power User — org/repo clustering",
+  "themes": ["dark", "purple"],
+  "gen": {"kind": "github"},
+  "asserts": {"hostCount": 1, "stats": "25 tabs matched"},
+  "actions": [
+    {"action": "expand-host", "host": "github.com", "shot": "clusters"}
+  ]
+}

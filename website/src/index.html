@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tabocalypse Reaper - End Your Tab Chaos</title>
+  <meta name="description" content="A Firefox extension that groups tabs by host and cluster, making it easy to reap entire groups with one click. End your tab chaos with one clean sweep!">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" type="image/svg+xml" href="assets/reaper-logo.svg">
+</head>
+<body class="bg-gradient-to-br from-purple-50 to-white dark:from-gray-900 dark:to-gray-800 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+
+  <!-- Navigation -->
+  <nav class="fixed top-0 w-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-md z-50 border-b border-purple-200 dark:border-purple-900">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <img src="assets/reaper-logo.svg" alt="Tabocalypse Reaper Logo" class="w-10 h-10 animate-float">
+        <span class="text-xl font-display font-bold bg-gradient-to-r from-reaper-700 to-reaper-500 bg-clip-text text-transparent">
+          Tabocalypse Reaper
+        </span>
+      </div>
+      <div class="flex items-center gap-6">
+        <a href="#features" class="text-gray-700 dark:text-gray-300 hover:text-reaper-700 dark:hover:text-reaper-400 transition-colors">Features</a>
+        <a href="#install" class="text-gray-700 dark:text-gray-300 hover:text-reaper-700 dark:hover:text-reaper-400 transition-colors">Install</a>
+        <a href="https://github.com/phcyso/Tabocalypse-Reaper" target="_blank" class="text-gray-700 dark:text-gray-300 hover:text-reaper-700 dark:hover:text-reaper-400 transition-colors">GitHub</a>
+        <button id="themeToggle" class="p-2 rounded-lg bg-purple-100 dark:bg-purple-900 hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors" aria-label="Toggle theme">
+          <span class="dark:hidden">🌙</span>
+          <span class="hidden dark:inline">☀️</span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="pt-32 pb-20 px-4">
+    <div class="max-w-6xl mx-auto">
+      <div class="grid md:grid-cols-2 gap-12 items-center">
+        <div class="space-y-6 animate-slide-up">
+          <h1 class="text-5xl md:text-6xl font-display font-bold leading-tight">
+            End Your Tab Chaos
+            <span class="block bg-gradient-to-r from-reaper-700 to-reaper-500 bg-clip-text text-transparent">
+              With One Clean Sweep
+            </span>
+          </h1>
+          <p class="text-xl text-gray-600 dark:text-gray-300">
+            A Firefox extension that groups your tabs by host and cluster, making bulk tab management actually fun.
+            No more endless scrolling through hundreds of tabs!
+          </p>
+          <div class="flex flex-wrap gap-4">
+            <a href="#install" class="px-8 py-4 bg-gradient-to-r from-reaper-700 to-reaper-500 text-white rounded-2xl font-semibold hover:scale-105 transition-transform shadow-lg hover:shadow-xl">
+              Install for Firefox
+            </a>
+            <a href="https://github.com/phcyso/Tabocalypse-Reaper" target="_blank" class="px-8 py-4 bg-white dark:bg-gray-800 text-reaper-700 dark:text-reaper-400 rounded-2xl font-semibold hover:scale-105 transition-transform border-2 border-reaper-300 dark:border-reaper-700">
+              View on GitHub
+            </a>
+          </div>
+          <div class="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+            <span class="flex items-center gap-2">
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+              </svg>
+              Free & Open Source
+            </span>
+            <span class="flex items-center gap-2">
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+              </svg>
+              v0.5.0
+            </span>
+          </div>
+        </div>
+        <div class="relative">
+          <img src="assets/reaper-hero.svg" alt="Tabocalypse Reaper character" class="w-full animate-float">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section id="features" class="py-20 px-4 bg-white/50 dark:bg-gray-800/50">
+    <div class="max-w-6xl mx-auto">
+      <h2 class="text-4xl font-display font-bold text-center mb-4">
+        <span class="bg-gradient-to-r from-reaper-700 to-reaper-500 bg-clip-text text-transparent">
+          Features
+        </span>
+      </h2>
+      <p class="text-center text-gray-600 dark:text-gray-300 mb-12 text-lg">
+        Everything you need to tame your tab horde
+      </p>
+
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <!-- Feature 1 -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 border border-purple-100 dark:border-purple-900">
+          <div class="text-5xl mb-4">🗂️</div>
+          <h3 class="text-xl font-bold mb-3 text-reaper-700 dark:text-reaper-400">Smart Grouping</h3>
+          <p class="text-gray-600 dark:text-gray-300">
+            Automatically organizes tabs into Host → Cluster hierarchy. GitHub repos, AWS docs, and generic sites all get special treatment.
+          </p>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 border border-purple-100 dark:border-purple-900">
+          <div class="text-5xl mb-4">⚡</div>
+          <h3 class="text-xl font-bold mb-3 text-reaper-700 dark:text-reaper-400">Bulk Actions</h3>
+          <p class="text-gray-600 dark:text-gray-300">
+            Reap entire groups with one click! Close all tabs from a host, cluster, or cherry-pick individual tabs. Safety confirmation for 10+ tabs.
+          </p>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 border border-purple-100 dark:border-purple-900">
+          <div class="text-5xl mb-4">🎨</div>
+          <h3 class="text-xl font-bold mb-3 text-reaper-700 dark:text-reaper-400">Theme Adaptive</h3>
+          <p class="text-gray-600 dark:text-gray-300">
+            Beautiful purple theme that adapts to your browser's light/dark mode preferences. Looks great everywhere.
+          </p>
+        </div>
+
+        <!-- Feature 4 -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 border border-purple-100 dark:border-purple-900">
+          <div class="text-5xl mb-4">🔍</div>
+          <h3 class="text-xl font-bold mb-3 text-reaper-700 dark:text-reaper-400">Quick Filter</h3>
+          <p class="text-gray-600 dark:text-gray-300">
+            Search across hosts, paths, and titles — just press <kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded font-mono text-sm">/</kbd> to jump to the filter. Option to exclude pinned tabs from view.
+          </p>
+        </div>
+
+        <!-- Feature 5 -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 border border-purple-100 dark:border-purple-900">
+          <div class="text-5xl mb-4">🪟</div>
+          <h3 class="text-xl font-bold mb-3 text-reaper-700 dark:text-reaper-400">Cross-Window</h3>
+          <p class="text-gray-600 dark:text-gray-300">
+            Works across all your Firefox windows: rows from other windows carry "W2"-style chips, hosts spanning windows show "⧉ N", and clicking a row raises its window.
+          </p>
+        </div>
+
+        <!-- Feature 6 -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 border border-purple-100 dark:border-purple-900">
+          <div class="text-5xl mb-4">🚀</div>
+          <h3 class="text-xl font-bold mb-3 text-reaper-700 dark:text-reaper-400">Zero Dependencies</h3>
+          <p class="text-gray-600 dark:text-gray-300">
+            Built with vanilla TypeScript. No runtime dependencies means fast loading and minimal resource usage.
+          </p>
+        </div>
+
+        <!-- Feature 7 -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 border border-purple-100 dark:border-purple-900">
+          <div class="text-5xl mb-4">↩️</div>
+          <h3 class="text-xl font-bold mb-3 text-reaper-700 dark:text-reaper-400">Undo Everything</h3>
+          <p class="text-gray-600 dark:text-gray-300">
+            Every bulk reap stores a snapshot and shows a "Reaped N · Undo" toast for 8 seconds. Undoing restores tabs to their window, with pin state.
+          </p>
+        </div>
+
+        <!-- Feature 8 -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 border border-purple-100 dark:border-purple-900">
+          <div class="text-5xl mb-4">🕰️</div>
+          <h3 class="text-xl font-bold mb-3 text-reaper-700 dark:text-reaper-400">Reap Stale</h3>
+          <p class="text-gray-600 dark:text-gray-300">
+            Rows carry relative-age chips ("3h", "2d"). Sort by "Recently stale first" and reap a host's tabs older than 24 h in one click.
+          </p>
+        </div>
+
+        <!-- Feature 9 -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 border border-purple-100 dark:border-purple-900">
+          <div class="text-5xl mb-4">👯</div>
+          <h3 class="text-xl font-bold mb-3 text-reaper-700 dark:text-reaper-400">Close Duplicates</h3>
+          <p class="text-gray-600 dark:text-gray-300">
+            Tabs sharing a normalized URL are marked "×N". One button keeps the most recent copy and reaps the rest.
+          </p>
+        </div>
+
+        <!-- Feature 10 -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 border border-purple-100 dark:border-purple-900">
+          <div class="text-5xl mb-4">📦</div>
+          <h3 class="text-xl font-bold mb-3 text-reaper-700 dark:text-reaper-400">Compact at Scale</h3>
+          <p class="text-gray-600 dark:text-gray-300">
+            Single-tab hosts collapse to one row and big sessions auto-collapse, so 50+ tabs stay scannable instead of becoming an 11-screen scroll.
+          </p>
+        </div>
+
+        <!-- Feature 11 -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 border border-purple-100 dark:border-purple-900">
+          <div class="text-5xl mb-4">🖼️</div>
+          <h3 class="text-xl font-bold mb-3 text-reaper-700 dark:text-reaper-400">Favicons Everywhere</h3>
+          <p class="text-gray-600 dark:text-gray-300">
+            Host, cluster, and row icons for fast scanning, with deterministic letter-avatar fallbacks when a favicon is missing.
+          </p>
+        </div>
+
+        <!-- Feature 12 -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 border border-purple-100 dark:border-purple-900">
+          <div class="text-5xl mb-4">⚡</div>
+          <h3 class="text-xl font-bold mb-3 text-reaper-700 dark:text-reaper-400">Instant at 150 Tabs</h3>
+          <p class="text-gray-600 dark:text-gray-300">
+            Closes and count updates re-render in place. A 150-tab session renders instantly — no spinner, no jank.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Demo Section -->
+  <section class="py-20 px-4">
+    <div class="max-w-6xl mx-auto">
+      <h2 class="text-4xl font-display font-bold text-center mb-4">
+        <span class="bg-gradient-to-r from-reaper-700 to-reaper-500 bg-clip-text text-transparent">
+          See It In Action
+        </span>
+      </h2>
+      <p class="text-center text-gray-600 dark:text-gray-300 mb-12 text-lg">
+        A peek at the extension popup in its natural habitat
+      </p>
+
+      <div class="bg-gradient-to-br from-purple-100 to-purple-50 dark:from-purple-900/20 dark:to-purple-800/20 rounded-3xl p-8 border-2 border-purple-200 dark:border-purple-700">
+        <!-- Screenshots Grid -->
+        <div class="grid md:grid-cols-2 gap-8 mb-8">
+          <div class="space-y-4">
+            <img src="assets/demo.png" alt="Tabocalypse Reaper popup showing 52 tabs across 50+ hosts as compact single-tab rows" class="w-full rounded-2xl shadow-2xl border border-purple-300 dark:border-purple-600 hover:scale-105 transition-transform">
+            <p class="text-sm text-center text-gray-600 dark:text-gray-400">
+              52 tabs across 50+ hosts — single-tab hosts stay compact so the pile stays scannable
+            </p>
+          </div>
+          <div class="space-y-4">
+            <img src="assets/demo-hosts.png" alt="Tabocalypse Reaper popup after a guarded 30-tab reap, with the Reaped 30 · Undo toast visible" class="w-full rounded-2xl shadow-2xl border border-purple-300 dark:border-purple-600 hover:scale-105 transition-transform">
+            <p class="text-sm text-center text-gray-600 dark:text-gray-400">
+              After a guarded 30-tab sweep — a "Reaped 30 · Undo" toast, age chips, and a "Sort outdated — Refresh" pill
+            </p>
+          </div>
+        </div>
+
+        <div class="text-center">
+          <p class="text-gray-700 dark:text-gray-300 mb-4">
+            The extension automatically groups tabs by Host → Cluster hierarchy with accurate counts and favicons for quick visual scanning.
+          </p>
+          <div class="flex flex-wrap justify-center gap-4 text-sm">
+            <span class="px-4 py-2 bg-purple-200 dark:bg-purple-800 text-purple-900 dark:text-purple-100 rounded-full font-semibold">
+              Live filtering
+            </span>
+            <span class="px-4 py-2 bg-purple-200 dark:bg-purple-800 text-purple-900 dark:text-purple-100 rounded-full font-semibold">
+              One-click reaping
+            </span>
+            <span class="px-4 py-2 bg-purple-200 dark:bg-purple-800 text-purple-900 dark:text-purple-100 rounded-full font-semibold">
+              Undo everything
+            </span>
+            <span class="px-4 py-2 bg-purple-200 dark:bg-purple-800 text-purple-900 dark:text-purple-100 rounded-full font-semibold">
+              50+ tabs? No problem!
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Installation Section -->
+  <section id="install" class="py-20 px-4 bg-white/50 dark:bg-gray-800/50">
+    <div class="max-w-4xl mx-auto">
+      <h2 class="text-4xl font-display font-bold text-center mb-4">
+        <span class="bg-gradient-to-r from-reaper-700 to-reaper-500 bg-clip-text text-transparent">
+          Installation
+        </span>
+      </h2>
+      <p class="text-center text-gray-600 dark:text-gray-300 mb-12 text-lg">
+        Get reaping in under 2 minutes
+      </p>
+
+      <div class="space-y-6">
+        <!-- Temporary Install (current method) -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-lg border border-purple-100 dark:border-purple-900">
+          <h3 class="text-2xl font-bold mb-4 text-reaper-700 dark:text-reaper-400 flex items-center gap-3">
+            <span class="text-3xl">🔧</span>
+            Developer Installation (Temporary)
+          </h3>
+          <ol class="space-y-4 text-gray-700 dark:text-gray-300">
+            <li class="flex gap-3">
+              <span class="flex-shrink-0 w-8 h-8 bg-reaper-600 text-white rounded-full flex items-center justify-center font-bold">1</span>
+              <span>Download or clone the <a href="https://github.com/phcyso/Tabocalypse-Reaper" class="text-reaper-600 dark:text-reaper-400 underline hover:text-reaper-700 dark:hover:text-reaper-300">GitHub repository</a></span>
+            </li>
+            <li class="flex gap-3">
+              <span class="flex-shrink-0 w-8 h-8 bg-reaper-600 text-white rounded-full flex items-center justify-center font-bold">2</span>
+              <span>Run <code class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded font-mono text-sm">npm install</code> and <code class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded font-mono text-sm">npm run prepare</code></span>
+            </li>
+            <li class="flex gap-3">
+              <span class="flex-shrink-0 w-8 h-8 bg-reaper-600 text-white rounded-full flex items-center justify-center font-bold">3</span>
+              <span>Open Firefox and navigate to <code class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded font-mono text-sm">about:debugging#/runtime/this-firefox</code></span>
+            </li>
+            <li class="flex gap-3">
+              <span class="flex-shrink-0 w-8 h-8 bg-reaper-600 text-white rounded-full flex items-center justify-center font-bold">4</span>
+              <span>Click "Load Temporary Add-on…" and select <code class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded font-mono text-sm">dist/manifest.json</code></span>
+            </li>
+            <li class="flex gap-3">
+              <span class="flex-shrink-0 w-8 h-8 bg-reaper-600 text-white rounded-full flex items-center justify-center font-bold">5</span>
+              <span>Start reaping! 💀</span>
+            </li>
+          </ol>
+          <div class="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl">
+            <p class="text-sm text-yellow-800 dark:text-yellow-200">
+              <strong>Note:</strong> Temporary add-ons are removed when Firefox restarts. We're working on getting published to Firefox Add-ons!
+            </p>
+          </div>
+        </div>
+
+        <!-- Future AMO install -->
+        <div class="bg-gradient-to-br from-purple-100 to-purple-50 dark:from-purple-900/30 dark:to-purple-800/30 rounded-3xl p-8 border-2 border-dashed border-purple-300 dark:border-purple-700">
+          <h3 class="text-2xl font-bold mb-3 text-reaper-700 dark:text-reaper-400 flex items-center gap-3">
+            <span class="text-3xl">🎯</span>
+            Coming Soon: One-Click Install
+          </h3>
+          <p class="text-gray-700 dark:text-gray-300">
+            We're working on getting Tabocalypse Reaper published to the official Firefox Add-ons marketplace. When it's ready, you'll be able to install it with a single click!
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="py-12 px-4 border-t border-purple-200 dark:border-purple-900">
+    <div class="max-w-6xl mx-auto">
+      <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+        <div class="flex items-center gap-3">
+          <img src="assets/reaper-logo.svg" alt="Tabocalypse Reaper" class="w-8 h-8">
+          <span class="text-gray-600 dark:text-gray-400">
+            Made with 💀 and ☕
+          </span>
+        </div>
+        <div class="flex gap-6">
+          <a href="https://github.com/phcyso/Tabocalypse-Reaper" target="_blank" class="text-gray-600 dark:text-gray-400 hover:text-reaper-700 dark:hover:text-reaper-400 transition-colors">
+            GitHub
+          </a>
+          <a href="https://github.com/phcyso/Tabocalypse-Reaper/issues" target="_blank" class="text-gray-600 dark:text-gray-400 hover:text-reaper-700 dark:hover:text-reaper-400 transition-colors">
+            Issues
+          </a>
+          <a href="https://github.com/phcyso/Tabocalypse-Reaper/releases" target="_blank" class="text-gray-600 dark:text-gray-400 hover:text-reaper-700 dark:hover:text-reaper-400 transition-colors">
+            Releases
+          </a>
+        </div>
+        <div class="text-gray-600 dark:text-gray-400 text-sm">
+          v0.5.0 • GPL-3.0 License
+        </div>
+      </div>
+      <div class="mt-8 text-center text-sm text-gray-500 dark:text-gray-500">
+        <p>Not affiliated with any browser vendor. Firefox is a trademark of the Mozilla Foundation.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>

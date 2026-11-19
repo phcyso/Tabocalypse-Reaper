@@ -1,0 +1,150 @@
+
+/* Author display rules must never defeat the [hidden] attribute (the undo toast
+   once floated empty over every state because .toast{display:flex} beat the UA
+   rule). */
+[hidden]{ display:none !important; }
+
+*{ box-sizing: border-box; }
+:root{
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --text: #0b0b0f;
+  --muted: #6b7280;
+  --line: #e5e7eb;
+  --card: #ffffff;
+  /* Accent-tinted badge token: mixes the live --accent/--card so the count keeps
+     ≥4.5:1 text contrast in every theme (review A5). */
+  --badge: color-mix(in srgb, var(--accent) 16%, var(--card));
+  --badgeText: var(--text);
+  --accent: #7c3aed;
+  --accent-2: #a78bfa;
+  --accent-strong: #5b21b6;
+  --accent-strong-active: #4c1d95;
+  --accent-contrast: #ffffff;
+  --danger: #7c2d12;
+  --danger-bg: #fee2e2;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg: #0f0f14;
+    --text: #f5f5f7;
+    --muted: #9ca3af;
+    --line: #1f2937;
+    --card: #111119;
+    --badge: color-mix(in srgb, var(--accent) 16%, var(--card));
+    --badgeText: var(--text);
+    --accent: #a78bfa;
+    --accent-2: #c4b5fd;
+    --accent-strong: #5b21b6;
+    --accent-strong-active: #43207e;
+    --accent-contrast: #ffffff;
+    --danger: #fecaca;
+    --danger-bg: #7f1d1d;
+  }
+}
+html, body{ height: 100%; }
+/* Figure-ground (review A7): theme-aware 1px outline keeps the popup readable on
+   white pages (light), dark pages (dark) and purple chrome (purple). */
+body{ font: 12px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif; width: 580px; margin:0; color:var(--text); background:var(--bg); border:1px solid color-mix(in srgb, var(--text) 30%, transparent); }
+
+.brandbar{ display:flex; gap:10px; align-items:center; padding:10px 12px; border-bottom:1px solid var(--line); background:linear-gradient(90deg, rgba(124,58,237,0.12), transparent 45%), color-mix(in srgb, var(--accent) 5%, var(--bg)); }
+.brandLogo{ width:24px; height:24px; border-radius:6px; }
+.brandName{ font-weight:800; letter-spacing:0.2px; }
+.brandTag{ color:var(--muted); }
+
+.toolbar{ display:flex; gap:8px; align-items:center; padding:8px 12px; border-bottom:1px dashed var(--line); position:sticky; top:0; background:var(--bg); z-index:3; }
+#search{ flex:1; min-width:0; padding:6px 10px; border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--text); }
+.opt{ font-size:11px; color:var(--muted); white-space:nowrap; }
+/* Themed checkbox states (review A5): accent-filled when checked, visible themed
+   ring when unchecked — no more invisible dark-on-dark squares in purple. */
+.opt input[type="checkbox"]{ accent-color:var(--accent); cursor:pointer; }
+.opt input[type="checkbox"]:not(:checked){ box-shadow:0 0 0 1px color-mix(in srgb, var(--text) 45%, transparent); border-radius:3px; }
+#sort, #refresh{ padding:6px 10px; border:1px solid var(--line); background:var(--card); color:var(--text); border-radius:8px; cursor:pointer; }
+#sort{ max-width:190px; }
+/* "Sort outdated" pill (review A9): accent-tinted, clickable, hard to miss. */
+#refreshHint{ border:1px solid var(--accent); color:var(--accent); background:color-mix(in srgb, var(--accent) 12%, var(--card)); border-radius:999px; padding:3px 10px; font-size:11px; font-weight:600; white-space:nowrap; cursor:pointer; }
+
+#stats{ padding:6px 12px; color:var(--muted); border-bottom:1px dashed var(--line); background:var(--bg); }
+/* Min-height keeps the popup from yo-yo-ing between sliver and full (review A2);
+   the bottom fade + scroll padding stop rows amputating at the panel edge (A6). */
+.tree{ padding:8px 10px 30px 10px; min-height:400px; max-height: 640px; overflow:auto; scroll-padding-bottom:16px; mask-image:linear-gradient(180deg, #000 calc(100% - 30px), transparent); }
+
+.hostCard{ border:1px solid var(--line); border-radius:14px; background:var(--card); margin:10px 0; overflow:hidden; box-shadow:0 1px 3px color-mix(in srgb, var(--text) 10%, transparent); }
+.hostHeader{ display:flex; align-items:center; gap:8px; padding:10px; background:rgba(124,58,237,0.05); cursor:pointer; }
+.hostHeader .hostName{ font-weight:700; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.hostHeader .badge, .clusterHeader .badge{ background:var(--badge); color:var(--badgeText); border:1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
+.hostHeader .badge{ font-weight:700; font-size:11px; padding:2px 8px; border-radius:999px; }
+.hostHeader .twisty{ border:1px solid var(--line); background:var(--card); width:26px; height:24px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; pointer-events:none; }
+.reapButton{ padding:4px 10px; border:1px solid var(--accent); background:transparent; color:var(--accent); border-radius:999px; cursor:pointer; font-weight:600; transition: color 120ms ease, background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease; }
+.reapButton:hover{ background:var(--accent-strong); border-color:var(--accent-strong); color:var(--accent-contrast); }
+.reapButton:focus-visible{ outline:none; background:var(--accent-strong); border-color:var(--accent-strong); color:var(--accent-contrast); box-shadow:0 0 0 2px var(--bg), 0 0 0 4px var(--accent-2); }
+.reapButton:active{ background:var(--accent-strong-active); border-color:var(--accent-strong-active); color:var(--accent-contrast); }
+.reapButton:disabled{ opacity:0.45; cursor:not-allowed; }
+.hostHeader .reapButton{ font-weight:700; }
+/* Secondary host actions (reviews F3/F8): quiet outline pills so Reap stays primary. */
+.staleButton, .dupButton{ padding:3px 9px; font-size:11px; border-radius:999px; cursor:pointer; background:var(--card); white-space:nowrap; }
+.staleButton{ border:1px solid var(--line); color:var(--muted); }
+.staleButton:hover{ border-color:var(--accent); color:var(--accent); }
+.dupButton{ border:1px solid color-mix(in srgb, var(--danger) 55%, var(--line)); color:var(--danger); }
+.dupButton:hover{ background:color-mix(in srgb, var(--danger-bg) 45%, var(--card)); }
+.hostHeader .hostIco{ width:16px; height:16px; border-radius:3px; background:var(--card); }
+/* Hairline frame so dark favicons (e.g. GitHub's) stay visible on dark/purple cards. */
+.tab .ico, .soloRow .soloIco, .hostHeader .hostIco, .clusterHeader .clusterIco{ box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--text) 14%, transparent); }
+.dot{ width:8px; height:8px; border-radius:999px; background:var(--accent); display:inline-block; }
+
+.hostBody{ padding:8px 10px; }
+.cluster{ border-left:2px dotted var(--line); margin:4px 0 10px 10px; padding-left:12px; }
+.clusterHeader{ display:flex; align-items:center; gap:8px; padding:6px 0; cursor:pointer; }
+.clusterHeader .clusterName{ font-weight:600; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.clusterHeader .badge{ padding:1px 6px; border-radius:999px; }
+.clusterHeader .twisty{ border:1px solid var(--line); background:var(--card); width:24px; height:22px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; pointer-events:none; }
+.clusterHeader .reapButton{ padding:2px 8px; }
+.clusterHeader .clusterIco{ width:14px; height:14px; border-radius:3px; background:var(--card); }
+.clusterHeaderHidden{ display:none; }
+.condensedCluster{ border-left:none; margin-left:0; padding-left:0; }
+.condensedCluster .clusterBody{ margin-top:0; padding-left:0; }
+.condensedCluster .clusterBody .clusterLabel{ font-size:11px; color:var(--muted); margin:0 0 4px 0; text-transform:uppercase; letter-spacing:0.08em; }
+
+.clusterBody{ margin-top:4px; }
+.tab{ display:flex; align-items:center; gap:8px; padding:4px 6px; border-radius:8px; }
+.tab:hover{ background:rgba(124,58,237,0.08); }
+.tab .x, .soloRow .x{ border:none; background:transparent; color:var(--accent); cursor:pointer; font-size:12px; }
+.tab.pinnedTab .title::before, .soloRow.pinnedTab .title::before{ content:"📌 "; font-size:14px; }
+.tab .ico{ width:14px; height:14px; border-radius:3px; background:var(--card); }
+.tab .title, .soloRow .title{ text-decoration:none; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tab .title{ max-width:390px; }
+.tab .path{ color:var(--muted); margin-left:auto; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* Compact single-tab host row (review A1): one line, no card chrome — a plain
+   scannable list row so 50 hosts fit ~2 screens instead of ~11. */
+.soloRow{ display:flex; align-items:center; gap:8px; padding:3px 8px; margin:1px 2px; border-radius:8px; }
+.soloRow:hover{ background:rgba(124,58,237,0.08); }
+.soloRow .soloHost{ color:var(--muted); font-weight:600; max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex-shrink:0; }
+.soloRow .title{ flex:0 1 auto; min-width:60px; }
+.soloRow .path{ color:var(--muted); margin-left:auto; max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.soloRow .soloIco{ width:14px; height:14px; border-radius:3px; background:var(--card); flex-shrink:0; }
+
+/* Row/header chips: age (F3), window (F2), duplicates (F8), pinned groups (A11). */
+.ageChip, .winChip, .dupChip{ font-size:10px; line-height:16px; padding:0 6px; border-radius:999px; white-space:nowrap; flex-shrink:0; }
+.ageChip{ color:var(--muted); border:1px solid var(--line); }
+.winChip{ color:var(--accent); border:1px solid color-mix(in srgb, var(--accent) 45%, transparent); background:color-mix(in srgb, var(--accent) 10%, var(--card)); font-weight:600; }
+.dupChip{ color:var(--danger); border:1px solid color-mix(in srgb, var(--danger) 45%, transparent); background:color-mix(in srgb, var(--danger-bg) 30%, var(--card)); font-weight:600; }
+.hostHeader .winChip, .clusterHeader .winChip{ font-size:10px; }
+.pinChip{ font-size:11px; color:var(--muted); white-space:nowrap; }
+
+/* Letter-avatar favicon fallback (review A3): themed tile tinted by a deterministic
+   hue per hostname — replaces the glaring hardcoded #e5e7eb squares. */
+.icoFallback{ display:none; align-items:center; justify-content:center; width:14px; height:14px; border-radius:3px; font-size:9px; font-weight:700; line-height:1; color:var(--text); flex-shrink:0; background:color-mix(in srgb, hsl(var(--avatar-hue, 260) 60% 55%) 20%, var(--card)); border:1px solid color-mix(in srgb, hsl(var(--avatar-hue, 260) 60% 55%) 40%, var(--line)); }
+.icoFallback:not([hidden]){ display:inline-flex; }
+.hostHeader .icoFallback{ width:16px; height:16px; font-size:10px; }
+
+/* Post-reap undo toast (review F1): "Reaped N · Undo", auto-dismisses. */
+.toast{ position:fixed; left:50%; bottom:14px; transform:translateX(-50%); display:flex; align-items:center; gap:10px; padding:7px 8px 7px 14px; border-radius:999px; background:var(--accent-strong); color:var(--accent-contrast); font-weight:600; box-shadow:0 10px 28px rgba(0,0,0,0.45); z-index:60; }
+.toastAction{ border:none; background:rgba(255,255,255,0.2); color:inherit; font-weight:700; border-radius:999px; padding:3px 12px; cursor:pointer; }
+.toastAction:hover{ background:rgba(255,255,255,0.32); }
+
+.small{ color:var(--muted); font-size:11px; }
+.spacer{ flex:1; }
+
+.emptyState{ padding:28px 16px; text-align:center; }
+.emptyStateHeadline{ font-size:14px; font-weight:700; margin-bottom:4px; }

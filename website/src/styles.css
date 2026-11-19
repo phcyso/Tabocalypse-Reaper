@@ -1,0 +1,207 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Smooth scrolling behavior */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Custom scrollbar for webkit browsers */
+  ::-webkit-scrollbar {
+    width: 12px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-purple-50 dark:bg-gray-900;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-purple-300 dark:bg-purple-700 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-purple-400 dark:bg-purple-600;
+  }
+}
+
+@layer components {
+  /* Custom gradient backgrounds */
+  .bg-reaper-gradient {
+    background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+  }
+
+  .bg-reaper-gradient-light {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.1) 0%, transparent 40%);
+  }
+}
+
+@layer utilities {
+  /* Custom animations */
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-20px);
+    }
+  }
+
+  @keyframes bounce-slow {
+    0%, 100% {
+      transform: translateY(0);
+      animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+    }
+    50% {
+      transform: translateY(-15%);
+      animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+    }
+  }
+
+  @keyframes wiggle {
+    0%, 100% {
+      transform: rotate(-3deg);
+    }
+    50% {
+      transform: rotate(3deg);
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(20px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideDown {
+    from {
+      transform: translateY(-20px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes pulse-slow {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  .animate-bounce-slow {
+    animation: bounce-slow 2s ease-in-out infinite;
+  }
+
+  .animate-wiggle {
+    animation: wiggle 1s ease-in-out infinite;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-in;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.5s ease-out;
+  }
+
+  .animate-slide-down {
+    animation: slideDown 0.5s ease-out;
+  }
+
+  .animate-pulse-slow {
+    animation: pulse-slow 3s ease-in-out infinite;
+  }
+
+  /* Gradient text */
+  .text-gradient {
+    @apply bg-gradient-to-r from-reaper-700 to-reaper-500 bg-clip-text text-transparent;
+  }
+
+  /* Glowing effect */
+  .glow-purple {
+    box-shadow: 0 0 20px rgba(124, 58, 237, 0.3);
+  }
+
+  .glow-purple-strong {
+    box-shadow: 0 0 30px rgba(124, 58, 237, 0.5);
+  }
+
+  /* Hover lift effect */
+  .hover-lift {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px rgba(124, 58, 237, 0.2);
+  }
+
+  /* Button styles */
+  .btn-reaper {
+    @apply px-6 py-3 bg-gradient-to-r from-reaper-700 to-reaper-500 text-white rounded-2xl font-semibold hover:scale-105 transition-transform shadow-lg hover:shadow-xl;
+  }
+
+  .btn-reaper-outline {
+    @apply px-6 py-3 bg-white dark:bg-gray-800 text-reaper-700 dark:text-reaper-400 rounded-2xl font-semibold hover:scale-105 transition-transform border-2 border-reaper-300 dark:border-reaper-700;
+  }
+}
+
+/* Dark mode transitions */
+* {
+  transition-property: background-color, border-color, color;
+  transition-duration: 300ms;
+  transition-timing-function: ease-in-out;
+}
+
+/* Prevent transition on page load */
+.no-transition * {
+  transition: none !important;
+}
+
+/* Playful hover effects for cards */
+.feature-card {
+  @apply bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 border border-purple-100 dark:border-purple-900;
+}
+
+/* Code block styling */
+code {
+  @apply px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded font-mono text-sm;
+}
+
+/* Link styling */
+a {
+  @apply transition-colors duration-200;
+}
+
+/* Selection color */
+::selection {
+  @apply bg-reaper-500/30 text-reaper-900;
+}
+
+::-moz-selection {
+  @apply bg-reaper-500/30 text-reaper-900;
+}

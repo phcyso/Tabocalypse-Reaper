@@ -1,0 +1,79 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="95" fill="url(#bgGradient)" opacity="0.1"/>
+
+  <!-- Purple robe/body -->
+  <path d="M 100 180 Q 60 160 55 120 L 55 90 Q 55 70 70 60 Q 85 50 100 50 Q 115 50 130 60 Q 145 70 145 90 L 145 120 Q 140 160 100 180 Z" fill="url(#robeGradient)"/>
+
+  <!-- Hood -->
+  <ellipse cx="100" cy="70" rx="50" ry="45" fill="url(#hoodGradient)"/>
+
+  <!-- Hood shadow -->
+  <ellipse cx="100" cy="85" rx="40" ry="35" fill="#3b0764" opacity="0.3"/>
+
+  <!-- Skull face -->
+  <ellipse cx="100" cy="80" rx="35" ry="40" fill="#f5f5f7"/>
+
+  <!-- Eyes (big friendly circles) -->
+  <circle cx="88" cy="75" r="8" fill="#7c3aed"/>
+  <circle cx="112" cy="75" r="8" fill="#7c3aed"/>
+
+  <!-- Eye highlights (sparkles) -->
+  <circle cx="90" cy="73" r="3" fill="#ffffff"/>
+  <circle cx="114" cy="73" r="3" fill="#ffffff"/>
+
+  <!-- Nose hole (cute small triangle) -->
+  <path d="M 100 85 L 97 90 L 103 90 Z" fill="#6b21a8" opacity="0.5"/>
+
+  <!-- Mouth (friendly smile) -->
+  <path d="M 85 95 Q 100 103 115 95" stroke="#7c3aed" stroke-width="3" fill="none" stroke-linecap="round"/>
+
+  <!-- Cheek blushes -->
+  <ellipse cx="75" cy="88" rx="6" ry="4" fill="#c084fc" opacity="0.3"/>
+  <ellipse cx="125" cy="88" rx="6" ry="4" fill="#c084fc" opacity="0.3"/>
+
+  <!-- Scythe handle -->
+  <line x1="145" y1="140" x2="165" y2="90" stroke="#6b21a8" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Scythe blade -->
+  <path d="M 165 90 Q 175 85 180 88 Q 185 91 182 98 Q 178 105 165 105 Z" fill="url(#bladeGradient)"/>
+
+  <!-- Scythe blade shine -->
+  <path d="M 168 92 Q 173 90 175 93 Q 176 95 173 98" stroke="#ffffff" stroke-width="1.5" fill="none" opacity="0.6"/>
+
+  <!-- Little floating tab (being reaped!) -->
+  <g transform="translate(35, 100) rotate(-15)">
+    <rect x="0" y="0" width="25" height="20" rx="3" fill="#e9d5ff" stroke="#a855f7" stroke-width="1.5"/>
+    <line x1="5" y1="7" x2="20" y2="7" stroke="#7c3aed" stroke-width="1.5" opacity="0.4"/>
+    <line x1="5" y1="13" x2="15" y2="13" stroke="#7c3aed" stroke-width="1.5" opacity="0.4"/>
+  </g>
+
+  <!-- Floating sparkles -->
+  <circle cx="50" cy="65" r="2" fill="#a855f7" opacity="0.6"/>
+  <circle cx="150" cy="75" r="1.5" fill="#c084fc" opacity="0.8"/>
+  <circle cx="130" cy="50" r="2.5" fill="#a855f7" opacity="0.5"/>
+  <circle cx="70" cy="45" r="1.5" fill="#c084fc" opacity="0.7"/>
+
+  <!-- Gradients -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7c3aed;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#a855f7;stop-opacity:1" />
+    </linearGradient>
+
+    <linearGradient id="robeGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#a855f7;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7c3aed;stop-opacity:1" />
+    </linearGradient>
+
+    <linearGradient id="hoodGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#6b21a8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7c3aed;stop-opacity:1" />
+    </linearGradient>
+
+    <linearGradient id="bladeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#c4b5fd;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e9d5ff;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+</svg>

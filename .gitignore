@@ -1,0 +1,17 @@
+dist/
+web-ext-artifacts/
+tabocalypse-reaper.zip
+node_modules/
+test-screenshots/
+scratch/
+
+# generated screenshot suites (regenerate: docker/shoot.py + make-amo.py)
+artifacts/
+
+# python cache from docker/ tooling
+__pycache__/
+*.pyc
+
+# crash dumps
+core
+core.*

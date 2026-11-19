@@ -1,0 +1,34 @@
+{
+  "name": "doom-pile",
+  "title": "The Doom Pile \u2014 ~100 tabs + guarded 30-tab sweep",
+  "themes": [
+    "dark",
+    "purple",
+    "light"
+  ],
+  "gen": {
+    "kind": "doom"
+  },
+  "asserts": {
+    "hostCountMin": 14,
+    "stats": "tabs matched"
+  },
+  "actions": [
+    {
+      "action": "expand-host",
+      "host": "meetings-conglomerate",
+      "shot": "big-group"
+    },
+    {
+      "action": "reap-host",
+      "host": "meetings-conglomerate",
+      "confirm": true,
+      "confirmShot": "confirm-dialog",
+      "shot": "after-reap",
+      "asserts": {
+        "dialogVisibleMin": 0,
+        "undoToast": true
+      }
+    }
+  ]
+}

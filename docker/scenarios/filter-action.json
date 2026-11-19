@@ -1,0 +1,10 @@
+{
+  "name": "filter-action",
+  "title": "Filter in action — find the needle",
+  "themes": ["dark", "purple"],
+  "gen": {"kind": "filterdemo"},
+  "asserts": {"hostCountMin": 12, "stats": "tabs matched"},
+  "actions": [
+    {"action": "filter", "text": "aws", "shot": "filtered"}
+  ]
+}

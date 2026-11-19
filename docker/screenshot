@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Thin wrapper: screenshot the agent container's virtual display (root window).
+# Passive — does NOT steal focus, so open extension popups stay open.
+# Usage: docker/screenshot [name.png]   -> written to artifacts/ on the host
+#        (via the /repo bind mount).
+set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(dirname "$HERE")"
+NAME="${1:-screenshot-$(date +%Y%m%d-%H%M%S).png}"
+mkdir -p "$ROOT/artifacts"
+docker compose -f "$HERE/docker-compose.yml" exec -T agent \
+  import -window root "/repo/artifacts/$NAME"
+echo "$ROOT/artifacts/$NAME"

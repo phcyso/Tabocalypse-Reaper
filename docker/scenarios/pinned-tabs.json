@@ -1,0 +1,26 @@
+{
+  "name": "pinned-tabs",
+  "title": "Pinned tabs \u2014 marked and protected",
+  "themes": [
+    "dark",
+    "purple"
+  ],
+  "gen": {
+    "kind": "pinned"
+  },
+  "asserts": {
+    "hostCount": 9,
+    "stats": "tabs matched"
+  },
+  "actions": [
+    {
+      "action": "toggle-pinned",
+      "exclude": false,
+      "shot": "pinned-included",
+      "asserts": {
+        "pinnedRowsMin": 3,
+        "stats": "12 tabs matched"
+      }
+    }
+  ]
+}

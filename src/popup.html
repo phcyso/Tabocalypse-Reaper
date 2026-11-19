@@ -1,0 +1,103 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https: data: moz-extension:; style-src 'self' 'unsafe-inline';">
+  <title>Tabocalypse Reaper</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="brandbar">
+    <img src="logo.svg" class="brandLogo" alt="" />
+    <div class="brand">
+      <div class="brandName">Tabocalypse Reaper</div>
+      <div class="brandTag small">End your tab chaos with one clean sweep</div>
+    </div>
+    <div class="spacer"></div>
+    <select id="sort" title="Sort order">
+      <option value="count">Sort: Most tabs</option>
+      <option value="alpha">Sort: A–Z</option>
+      <option value="stale">Sort: Recently stale first</option>
+    </select>
+  </header>
+
+  <section class="toolbar">
+    <input id="search" type="search" placeholder="Filter host/path/title ( / to focus )" aria-label="Filter">
+    <label class="opt"><input type="checkbox" id="excludePinned" checked> Exclude pinned</label>
+    <button id="refresh" title="Reload open tabs">Refresh</button>
+    <button id="refreshHint" class="refreshHint" hidden title="Tabs changed — the visible order may be outdated">Sort outdated — Refresh</button>
+  </section>
+
+  <div id="stats"></div>
+  <div id="tree" class="tree"></div>
+
+  <div id="toast" class="toast" hidden>
+    <span id="toastText"></span>
+    <button id="toastAction" class="toastAction">Undo</button>
+  </div>
+
+  <template id="hostTemplate">
+    <section class="hostCard">
+      <header class="hostHeader" tabindex="0" role="button" aria-expanded="false">
+        <span class="twisty" aria-hidden="true">▸</span>
+        <img class="ico hostIco" alt="" referrerpolicy="no-referrer" />
+        <span class="icoFallback hostIcoFallback" aria-hidden="true" hidden></span>
+        <span class="hostName"></span>
+        <span class="badge"></span>
+        <span class="pinChip" hidden></span>
+        <span class="winChip" hidden></span>
+        <div class="spacer"></div>
+        <button class="staleButton" title="Close tabs older than 24h" hidden>Reap stale</button>
+        <button class="dupButton" title="Close duplicate tabs — keeps the newest copy" hidden>Close dups</button>
+        <button class="close reapButton" title="Close all in host">Reap</button>
+      </header>
+      <div class="hostBody"></div>
+    </section>
+  </template>
+
+  <template id="clusterTemplate">
+    <div class="cluster">
+      <header class="clusterHeader" tabindex="0" role="button" aria-expanded="false">
+        <span class="twisty" aria-hidden="true">▸</span>
+        <img class="ico clusterIco" alt="" referrerpolicy="no-referrer" />
+        <span class="icoFallback clusterIcoFallback" aria-hidden="true" hidden></span>
+        <span class="clusterName"></span>
+        <span class="badge small"></span>
+        <span class="pinChip" hidden></span>
+        <span class="dupChip" hidden></span>
+        <div class="spacer"></div>
+        <button class="close reapButton" title="Close cluster">Reap</button>
+      </header>
+      <div class="clusterBody"></div>
+    </div>
+  </template>
+
+  <template id="tabTemplate">
+    <div class="tab">
+      <img class="ico" alt="" referrerpolicy="no-referrer" />
+      <span class="icoFallback tabIcoFallback" aria-hidden="true" hidden></span>
+      <a class="title" target="_self"></a>
+      <span class="path small"></span>
+      <span class="ageChip" hidden></span>
+      <span class="winChip" hidden></span>
+      <span class="dupChip" hidden></span>
+      <button class="x" title="Close tab">✕</button>
+    </div>
+  </template>
+
+  <template id="soloTemplate">
+    <div class="soloRow">
+      <img class="ico soloIco" alt="" referrerpolicy="no-referrer" />
+      <span class="icoFallback soloIcoFallback" aria-hidden="true" hidden></span>
+      <span class="soloHost small"></span>
+      <a class="title soloTitle" target="_self"></a>
+      <span class="path small"></span>
+      <span class="ageChip" hidden></span>
+      <span class="winChip" hidden></span>
+      <button class="x" title="Close tab">✕</button>
+    </div>
+  </template>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

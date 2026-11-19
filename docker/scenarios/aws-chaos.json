@@ -1,0 +1,25 @@
+{
+  "name": "aws-chaos",
+  "title": "AWS Console Chaos \u2014 service clustering",
+  "themes": [
+    "dark",
+    "purple"
+  ],
+  "gen": {
+    "kind": "aws"
+  },
+  "asserts": {
+    "hostCount": 2,
+    "stats": "tabs matched"
+  },
+  "actions": [
+    {
+      "action": "expand-host",
+      "host": "docs.aws.amazon.com",
+      "shot": "clusters",
+      "asserts": {
+        "hostCount": 2
+      }
+    }
+  ]
+}

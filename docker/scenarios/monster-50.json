@@ -1,0 +1,33 @@
+{
+  "name": "monster-50",
+  "title": "The 50+ Tab Monster",
+  "themes": [
+    "dark",
+    "purple",
+    "light"
+  ],
+  "gen": {
+    "kind": "monster"
+  },
+  "asserts": {
+    "hostCountMin": 40,
+    "soloRowsMin": 40,
+    "stats": "tabs matched"
+  },
+  "actions": [
+    {
+      "action": "filter",
+      "text": "github",
+      "shot": "filtered",
+      "asserts": {
+        "hostCount": 1,
+        "stats": "tab matched"
+      }
+    },
+    {
+      "action": "filter",
+      "text": "",
+      "shot": "cleared"
+    }
+  ]
+}

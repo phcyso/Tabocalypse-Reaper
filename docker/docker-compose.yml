@@ -1,0 +1,147 @@
+# Tabocalypse Reaper — local dev Docker setup (screenshots + headed testing).
+#
+# Usage (from repo root):
+#   docker compose -f docker/docker-compose.yml up -d --build agent
+#   docker compose -f docker/docker-compose.yml --profile selenium up -d selenium
+#
+# Both services bind-mount the repo read-write at /repo. The extension is
+# delivered ONLY via the bind-mounted dist/ (dev path) — never baked in.
+
+name: tabocalypse-reaper
+
+services:
+  # Agent-clicking image: Xvfb + openbox + firefox-esr + web-ext + xdotool.
+  agent:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: tabocalypse-reaper-agent:local
+    shm_size: "2g"
+    environment:
+      DISPLAY: ":99"
+      SCREEN_GEOMETRY: "1920x1080x24"
+    sysctls:
+      # filler_server.py binds port 80 as non-root
+      - net.ipv4.ip_unprivileged_port_start=80
+    extra_hosts:
+      # seeded .test filler hosts -> local pages (docker/filler_server.py)
+      "apidocs.test": "127.0.0.1"
+      "artfolio.test": "127.0.0.1"
+      "auroraforecast.test": "127.0.0.1"
+      "awsconsolemirror.test": "127.0.0.1"
+      "basketbarn.test": "127.0.0.1"
+      "blogland.test": "127.0.0.1"
+      "boardgamearena.test": "127.0.0.1"
+      "bookbridge.test": "127.0.0.1"
+      "booknook.test": "127.0.0.1"
+      "brightlantern.test": "127.0.0.1"
+      "bugtrackr.test": "127.0.0.1"
+      "buildbotic.test": "127.0.0.1"
+      "calendarhub.test": "127.0.0.1"
+      "cartmart.test": "127.0.0.1"
+      "chirpbird.test": "127.0.0.1"
+      "clipwave.test": "127.0.0.1"
+      "cloudops.test": "127.0.0.1"
+      "codepad.test": "127.0.0.1"
+      "courierjournal.test": "127.0.0.1"
+      "craftcorner.test": "127.0.0.1"
+      "cyclinglog.test": "127.0.0.1"
+      "dealbay.test": "127.0.0.1"
+      "deployowl.test": "127.0.0.1"
+      "devdocsdaily.test": "127.0.0.1"
+      "docuverse.test": "127.0.0.1"
+      "eveningecho.test": "127.0.0.1"
+      "financewise.test": "127.0.0.1"
+      "fittrack.test": "127.0.0.1"
+      "friendverse.test": "127.0.0.1"
+      "funnyorboot.test": "127.0.0.1"
+      "gadgetguru.test": "127.0.0.1"
+      "gamehive.test": "127.0.0.1"
+      "gardenlog.test": "127.0.0.1"
+      "gazettehub.test": "127.0.0.1"
+      "gitforge.test": "127.0.0.1"
+      "githublike.test": "127.0.0.1"
+      "gizmodrop.test": "127.0.0.1"
+      "gramwise.test": "127.0.0.1"
+      "handbookly.test": "127.0.0.1"
+      "inboxzero.test": "127.0.0.1"
+      "k8sboard.test": "127.0.0.1"
+      "lanterndb.test": "127.0.0.1"
+      "linknest.test": "127.0.0.1"
+      "linterly.test": "127.0.0.1"
+      "luxelane.test": "127.0.0.1"
+      "manpages.test": "127.0.0.1"
+      "mapmyrun.test": "127.0.0.1"
+      "mdn-notes.test": "127.0.0.1"
+      "meetings-conglomerate.test": "127.0.0.1"
+      "moonthemes.test": "127.0.0.1"
+      "morningwire.test": "127.0.0.1"
+      "mossgarden.test": "127.0.0.1"
+      "newsfeed.test": "127.0.0.1"
+      "newsfirehose.test": "127.0.0.1"
+      "newswire.test": "127.0.0.1"
+      "newsy.test": "127.0.0.1"
+      "notesmith.test": "127.0.0.1"
+      "petforum.test": "127.0.0.1"
+      "photogram.test": "127.0.0.1"
+      "pigeonpost.test": "127.0.0.1"
+      "pipelinenine.test": "127.0.0.1"
+      "pixelforge.test": "127.0.0.1"
+      "plantparent.test": "127.0.0.1"
+      "podhaven.test": "127.0.0.1"
+      "pressdesk.test": "127.0.0.1"
+      "pydocportal.test": "127.0.0.1"
+      "quotevault.test": "127.0.0.1"
+      "ravenpost.test": "127.0.0.1"
+      "readthedocsy.test": "127.0.0.1"
+      "recipebox.test": "127.0.0.1"
+      "recipehub.test": "127.0.0.1"
+      "reciperack.test": "127.0.0.1"
+      "runtracker.test": "127.0.0.1"
+      "serveryard.test": "127.0.0.1"
+      "shoply.test": "127.0.0.1"
+      "shopwave.test": "127.0.0.1"
+      "skypatterns.test": "127.0.0.1"
+      "stackzone.test": "127.0.0.1"
+      "starcatalog.test": "127.0.0.1"
+      "streamly.test": "127.0.0.1"
+      "studyhall.test": "127.0.0.1"
+      "teaatlas.test": "127.0.0.1"
+      "thedailypixel.test": "127.0.0.1"
+      "thriftlane.test": "127.0.0.1"
+      "ticketsmith.test": "127.0.0.1"
+      "tideclock.test": "127.0.0.1"
+      "trailmaps.test": "127.0.0.1"
+      "traveldesk.test": "127.0.0.1"
+      "trendly.test": "127.0.0.1"
+      "vaulthive.test": "127.0.0.1"
+      "vibely.test": "127.0.0.1"
+      "vinylcrate.test": "127.0.0.1"
+      "vinyltap.test": "127.0.0.1"
+      "weatherbee.test": "127.0.0.1"
+      "wikiguide.test": "127.0.0.1"
+    volumes:
+      - ..:/repo
+    working_dir: /repo
+    # stays up for `docker exec` / helper wrappers
+    command: ["sleep", "infinity"]
+
+  # Scripted WebDriver route. Prebuilt upstream image — pull, don't rebuild.
+  # Port 4444 (WebDriver) + 7900 (noVNC live view) exposed for local use.
+  selenium:
+    image: selenium/standalone-firefox:latest
+    profiles: ["selenium"]
+    shm_size: "2g"
+    ports:
+      - "4444:4444"
+      - "7900:7900"
+    environment:
+      SE_SCREEN_WIDTH: "1920"
+      SE_SCREEN_HEIGHT: "1080"
+      SE_SCREEN_DEPTH: "24"
+      # Firefox (recent versions) rejects privileged Marionette commands
+      # (moz/context chrome, system-access execute_script) unless this is set.
+      MOZ_REMOTE_ALLOW_SYSTEM_ACCESS: "1"
+    volumes:
+      - ..:/repo
+    working_dir: /repo

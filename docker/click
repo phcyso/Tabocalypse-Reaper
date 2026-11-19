@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Thin wrapper: click at (x, y) inside the agent container's virtual display.
+# Usage: docker/click X Y [button] [extra xdotool args...]
+#   e.g. docker/click 1520 45 1
+set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+X="${1:?usage: docker/click X Y [button]}"; shift
+Y="${1:?usage: docker/click X Y [button]}"; shift
+BTN="${1:-1}"; [ $# -gt 0 ] && shift || true
+exec docker compose -f "$HERE/docker-compose.yml" exec -T agent \
+  xdotool mousemove --sync "$X" "$Y" click "$BTN" "$@"

@@ -1,0 +1,70 @@
+name: PR Build
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    outputs:
+      artifact_url: ${{ steps.upload_artifact.outputs.artifact-url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '26'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint extension
+        run: npm run lint
+
+      - name: Build extension
+        run: npm run build
+
+      - name: Upload artifact
+        id: upload_artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: firefox-extension-unsigned
+          path: web-ext-artifacts/*.zip
+          retention-days: 30
+
+  comment-artifact:
+    needs: build
+    if: github.event_name == 'pull_request' && needs.build.outputs.artifact_url != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Post artifact link to PR
+        env:
+          ARTIFACT_URL: ${{ needs.build.outputs.artifact_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [ -z "$ARTIFACT_URL" ] || [ "$ARTIFACT_URL" = "null" ]; then
+            echo "No artifact URL available to post to the pull request." >&2
+            exit 0
+          fi
+
+          body=$(printf '%s\n' \
+            '<!-- pr-build-artifact -->' \
+            '**Latest Dev Extension Build**' \
+            '' \
+            "- 🔗 [Download PR build artifact]($ARTIFACT_URL)")
+
+          gh pr comment --repo "$GITHUB_REPOSITORY" "$ISSUE_NUMBER" --body "$body"

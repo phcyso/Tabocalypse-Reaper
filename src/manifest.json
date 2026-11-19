@@ -1,0 +1,43 @@
+{
+  "manifest_version": 2,
+  "name": "Tabocalypse Reaper",
+  "version": "0.5.0",
+  "description": "End your tab chaos: groups tabs by host → cluster (GitHub/AWS aware), shows favicons, filters, and reaps whole groups — with a confirm guard for big sweeps.",
+  "author": "Kim Dowling",
+  "permissions": [
+    "tabs",
+    "storage",
+    "theme"
+  ],
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "64": "icons/icon-64.png",
+    "96": "icons/icon-96.png",
+    "128": "icons/icon-128.png"
+  },
+  "browser_action": {
+    "default_title": "Tabocalypse Reaper",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "64": "icons/icon-64.png",
+      "96": "icons/icon-96.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "tabocalypse-reaper@phcyso.com",
+      "strict_min_version": "115.0",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ]
+      }
+    }
+  }
+}

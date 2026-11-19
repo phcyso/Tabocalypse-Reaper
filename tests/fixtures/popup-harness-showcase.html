@@ -1,0 +1,182 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; img-src 'self' https: data: moz-extension:; style-src 'self' 'unsafe-inline';">
+  <title>Tabocalypse Reaper</title>
+  <link rel="stylesheet" href="../../dist/popup.css">
+</head>
+<body>
+  <header class="brandbar">
+    <img src="../../dist/logo.svg" class="brandLogo" alt="" />
+    <div class="brand">
+      <div class="brandName">Tabocalypse Reaper</div>
+      <div class="brandTag small">End your tab chaos with one clean sweep</div>
+    </div>
+    <div class="spacer"></div>
+    <select id="sort" title="Sort order">
+      <option value="count">Sort: Most tabs</option>
+      <option value="alpha">Sort: A–Z</option>
+      <option value="stale">Sort: Recently stale first</option>
+    </select>
+  </header>
+
+  <section class="toolbar">
+    <input id="search" type="search" placeholder="Filter host/path/title ( / to focus )" aria-label="Filter">
+    <label class="opt"><input type="checkbox" id="excludePinned" checked> Exclude pinned</label>
+    <button id="refresh" title="Reload open tabs">Refresh</button>
+    <button id="refreshHint" class="refreshHint" hidden title="Tabs changed — the visible order may be outdated">Sort outdated — Refresh</button>
+  </section>
+
+  <div id="stats"></div>
+  <div id="tree" class="tree"></div>
+
+  <div id="toast" class="toast" hidden>
+    <span id="toastText"></span>
+    <button id="toastAction" class="toastAction">Undo</button>
+  </div>
+
+  <template id="hostTemplate">
+    <section class="hostCard">
+      <header class="hostHeader" tabindex="0" role="button" aria-expanded="false">
+        <span class="twisty" aria-hidden="true">▸</span>
+        <img class="ico hostIco" alt="" referrerpolicy="no-referrer" />
+        <span class="icoFallback hostIcoFallback" aria-hidden="true" hidden></span>
+        <span class="hostName"></span>
+        <span class="badge"></span>
+        <span class="pinChip" hidden></span>
+        <span class="winChip" hidden></span>
+        <div class="spacer"></div>
+        <button class="staleButton" title="Close tabs older than 24h" hidden>Reap stale</button>
+        <button class="dupButton" title="Close duplicate tabs — keeps the newest copy" hidden>Close dups</button>
+        <button class="close reapButton" title="Close all in host">Reap</button>
+      </header>
+      <div class="hostBody"></div>
+    </section>
+  </template>
+
+  <template id="clusterTemplate">
+    <div class="cluster">
+      <header class="clusterHeader" tabindex="0" role="button" aria-expanded="false">
+        <span class="twisty" aria-hidden="true">▸</span>
+        <img class="ico clusterIco" alt="" referrerpolicy="no-referrer" />
+        <span class="icoFallback clusterIcoFallback" aria-hidden="true" hidden></span>
+        <span class="clusterName"></span>
+        <span class="badge small"></span>
+        <span class="pinChip" hidden></span>
+        <span class="dupChip" hidden></span>
+        <div class="spacer"></div>
+        <button class="close reapButton" title="Close cluster">Reap</button>
+      </header>
+      <div class="clusterBody"></div>
+    </div>
+  </template>
+
+  <template id="tabTemplate">
+    <div class="tab">
+      <img class="ico" alt="" referrerpolicy="no-referrer" />
+      <span class="icoFallback tabIcoFallback" aria-hidden="true" hidden></span>
+      <a class="title" target="_self"></a>
+      <span class="path small"></span>
+      <span class="ageChip" hidden></span>
+      <span class="winChip" hidden></span>
+      <span class="dupChip" hidden></span>
+      <button class="x" title="Close tab">✕</button>
+    </div>
+  </template>
+
+  <template id="soloTemplate">
+    <div class="soloRow">
+      <img class="ico soloIco" alt="" referrerpolicy="no-referrer" />
+      <span class="icoFallback soloIcoFallback" aria-hidden="true" hidden></span>
+      <span class="soloHost small"></span>
+      <a class="title soloTitle" target="_self"></a>
+      <span class="path small"></span>
+      <span class="ageChip" hidden></span>
+      <span class="winChip" hidden></span>
+      <button class="x" title="Close tab">✕</button>
+    </div>
+  </template>
+
+  <script>
+  const __tabs = [{"id":7001,"url":"https://github.com/phcyso/Tabocalypse-Reaper","title":"GitHub - phcyso/Tabocalypse-Reaper: End your tab chaos","pinned":false,"windowId":1,"favIconUrl":"data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Crect%20width%3D%2216%22%20height%3D%2216%22%20rx%3D%223%22%20fill%3D%22%2324292f%22%2F%3E%3Ctext%20x%3D%228%22%20y%3D%2212%22%20font-family%3D%22sans-serif%22%20font-size%3D%2210%22%20font-weight%3D%22700%22%20fill%3D%22%23fff%22%20text-anchor%3D%22middle%22%3EG%3C%2Ftext%3E%3C%2Fsvg%3E"},{"id":7002,"url":"https://github.com/phcyso/Tabocalypse-Reaper/pull/37","title":"Add session restore support by phcyso · Pull Request #37","pinned":false,"windowId":1,"favIconUrl":"data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Crect%20width%3D%2216%22%20height%3D%2216%22%20rx%3D%223%22%20fill%3D%22%2324292f%22%2F%3E%3Ctext%20x%3D%228%22%20y%3D%2212%22%20font-family%3D%22sans-serif%22%20font-size%3D%2210%22%20font-weight%3D%22700%22%20fill%3D%22%23fff%22%20text-anchor%3D%22middle%22%3EG%3C%2Ftext%3E%3C%2Fsvg%3E"},{"id":7003,"url":"https://github.com/phcyso/Tabocalypse-Reaper/issues/42","title":"Favicon flicker on refresh · Issue #42","pinned":false,"windowId":1,"favIconUrl":"data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Crect%20width%3D%2216%22%20height%3D%2216%22%20rx%3D%223%22%20fill%3D%22%2324292f%22%2F%3E%3Ctext%20x%3D%228%22%20y%3D%2212%22%20font-family%3D%22sans-serif%22%20font-size%3D%2210%22%20font-weight%3D%22700%22%20fill%3D%22%23fff%22%20text-anchor%3D%22middle%22%3EG%3C%2Ftext%3E%3C%2Fsvg%3E"},{"id":7004,"url":"https://github.com/octocat/Spoon-Knife","title":"GitHub - octocat/Spoon-Knife: The repo everyone forks","pinned":false,"windowId":1,"favIconUrl":"data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Crect%20width%3D%2216%22%20height%3D%2216%22%20rx%3D%223%22%20fill%3D%22%2324292f%22%2F%3E%3Ctext%20x%3D%228%22%20y%3D%2212%22%20font-family%3D%22sans-serif%22%20font-size%3D%2210%22%20font-weight%3D%22700%22%20fill%3D%22%23fff%22%20text-anchor%3D%22middle%22%3EG%3C%2Ftext%3E%3C%2Fsvg%3E"},{"id":7005,"url":"https://github.com/octocat/Spoon-Knife/blob/main/README.md","title":"Spoon-Knife docs: fork a sample repo","pinned":false,"windowId":1,"favIconUrl":"data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Crect%20width%3D%2216%22%20height%3D%2216%22%20rx%3D%223%22%20fill%3D%22%2324292f%22%2F%3E%3Ctext%20x%3D%228%22%20y%3D%2212%22%20font-family%3D%22sans-serif%22%20font-size%3D%2210%22%20font-weight%3D%22700%22%20fill%3D%22%23fff%22%20text-anchor%3D%22middle%22%3EG%3C%2Ftext%3E%3C%2Fsvg%3E"},{"id":7010,"url":"https://docs.aws.amazon.com/eks/latest/userguide/what-is.html","title":"What is Amazon EKS? - Amazon EKS","pinned":false,"windowId":1,"favIconUrl":"data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Crect%20width%3D%2216%22%20height%3D%2216%22%20rx%3D%223%22%20fill%3D%22%23ff9900%22%2F%3E%3Ctext%20x%3D%228%22%20y%3D%2212%22%20font-family%3D%22sans-serif%22%20font-size%3D%2210%22%20font-weight%3D%22700%22%20fill%3D%22%23fff%22%20text-anchor%3D%22middle%22%3EA%3C%2Ftext%3E%3C%2Fsvg%3E"},{"id":7011,"url":"https://docs.aws.amazon.com/lambda/latest/dg/welcome.html","title":"Lambda developer guide - AWS","pinned":false,"windowId":1,"favIconUrl":"data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Crect%20width%3D%2216%22%20height%3D%2216%22%20rx%3D%223%22%20fill%3D%22%23ff9900%22%2F%3E%3Ctext%20x%3D%228%22%20y%3D%2212%22%20font-family%3D%22sans-serif%22%20font-size%3D%2210%22%20font-weight%3D%22700%22%20fill%3D%22%23fff%22%20text-anchor%3D%22middle%22%3EA%3C%2Ftext%3E%3C%2Fsvg%3E"},{"id":7012,"url":"https://console.aws.amazon.com/eks/home","title":"Amazon EKS console","pinned":false,"windowId":1,"favIconUrl":"data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Crect%20width%3D%2216%22%20height%3D%2216%22%20rx%3D%223%22%20fill%3D%22%23ff9900%22%2F%3E%3Ctext%20x%3D%228%22%20y%3D%2212%22%20font-family%3D%22sans-serif%22%20font-size%3D%2210%22%20font-weight%3D%22700%22%20fill%3D%22%23fff%22%20text-anchor%3D%22middle%22%3EA%3C%2Ftext%3E%3C%2Fsvg%3E"},{"id":7013,"url":"https://console.aws.amazon.com/cloudwatch/home","title":"CloudWatch console","pinned":false,"windowId":1,"favIconUrl":"data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Crect%20width%3D%2216%22%20height%3D%2216%22%20rx%3D%223%22%20fill%3D%22%23ff9900%22%2F%3E%3Ctext%20x%3D%228%22%20y%3D%2212%22%20font-family%3D%22sans-serif%22%20font-size%3D%2210%22%20font-weight%3D%22700%22%20fill%3D%22%23fff%22%20text-anchor%3D%22middle%22%3EA%3C%2Ftext%3E%3C%2Fsvg%3E"},{"id":7020,"url":"https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions","title":"WebExtensions - Mozilla | MDN","pinned":false,"windowId":1,"favIconUrl":"data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Crect%20width%3D%2216%22%20height%3D%2216%22%20rx%3D%223%22%20fill%3D%22%231b1b1b%22%2F%3E%3Ctext%20x%3D%228%22%20y%3D%2212%22%20font-family%3D%22sans-serif%22%20font-size%3D%2210%22%20font-weight%3D%22700%22%20fill%3D%22%23fff%22%20text-anchor%3D%22middle%22%3EM%3C%2Ftext%3E%3C%2Fsvg%3E"},{"id":7021,"url":"https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/tabs/update","title":"tabs.update() - MDN","pinned":false,"windowId":2,"favIconUrl":"data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Crect%20width%3D%2216%22%20height%3D%2216%22%20rx%3D%223%22%20fill%3D%22%231b1b1b%22%2F%3E%3Ctext%20x%3D%228%22%20y%3D%2212%22%20font-family%3D%22sans-serif%22%20font-size%3D%2210%22%20font-weight%3D%22700%22%20fill%3D%22%23fff%22%20text-anchor%3D%22middle%22%3EM%3C%2Ftext%3E%3C%2Fsvg%3E"},{"id":7030,"url":"https://news.ycombinator.com/news","title":"Hacker News","pinned":false,"windowId":2,"favIconUrl":"data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Crect%20width%3D%2216%22%20height%3D%2216%22%20rx%3D%223%22%20fill%3D%22%23ff6600%22%2F%3E%3Ctext%20x%3D%228%22%20y%3D%2212%22%20font-family%3D%22sans-serif%22%20font-size%3D%2210%22%20font-weight%3D%22700%22%20fill%3D%22%23fff%22%20text-anchor%3D%22middle%22%3EY%3C%2Ftext%3E%3C%2Fsvg%3E"},{"id":7031,"url":"https://example.com/blog/2026-review","title":"Year in review: shipping a Firefox extension","pinned":false,"windowId":2,"favIconUrl":"data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Crect%20width%3D%2216%22%20height%3D%2216%22%20rx%3D%223%22%20fill%3D%22%237c3aed%22%2F%3E%3Ctext%20x%3D%228%22%20y%3D%2212%22%20font-family%3D%22sans-serif%22%20font-size%3D%2210%22%20font-weight%3D%22700%22%20fill%3D%22%23fff%22%20text-anchor%3D%22middle%22%3EB%3C%2Ftext%3E%3C%2Fsvg%3E"},{"id":7032,"url":"https://example.com/blog/reaper-build","title":"How I built a tab reaper","pinned":false,"windowId":2,"favIconUrl":"data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Crect%20width%3D%2216%22%20height%3D%2216%22%20rx%3D%223%22%20fill%3D%22%237c3aed%22%2F%3E%3Ctext%20x%3D%228%22%20y%3D%2212%22%20font-family%3D%22sans-serif%22%20font-size%3D%2210%22%20font-weight%3D%22700%22%20fill%3D%22%23fff%22%20text-anchor%3D%22middle%22%3EB%3C%2Ftext%3E%3C%2Fsvg%3E"},{"id":7040,"url":"https://mail.example.com/inbox","title":"Inbox (3) - Mail","pinned":true,"windowId":1,"favIconUrl":"data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Crect%20width%3D%2216%22%20height%3D%2216%22%20rx%3D%223%22%20fill%3D%22%230369a1%22%2F%3E%3Ctext%20x%3D%228%22%20y%3D%2212%22%20font-family%3D%22sans-serif%22%20font-size%3D%2210%22%20font-weight%3D%22700%22%20fill%3D%22%23fff%22%20text-anchor%3D%22middle%22%3E%40%3C%2Ftext%3E%3C%2Fsvg%3E"},{"id":7041,"url":"https://calendar.example.com/week","title":"Week 45 - Calendar","pinned":true,"windowId":1,"favIconUrl":"data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Crect%20width%3D%2216%22%20height%3D%2216%22%20rx%3D%223%22%20fill%3D%22%23dc2626%22%2F%3E%3Ctext%20x%3D%228%22%20y%3D%2212%22%20font-family%3D%22sans-serif%22%20font-size%3D%2210%22%20font-weight%3D%22700%22%20fill%3D%22%23fff%22%20text-anchor%3D%22middle%22%3EC%3C%2Ftext%3E%3C%2Fsvg%3E"}];
+  const __noopListener = { addListener() {}, removeListener() {} };
+  const __sessionStore = {};
+  window.browser = {
+    tabs: {
+      async query() { return JSON.parse(JSON.stringify(__tabs)); },
+      async remove(ids) { console.info("stub remove", ids); },
+      async update(id, info) { console.info("stub update", id, info); },
+      async create(info) { console.info("stub create", info); return { id: -1 }; },
+      onUpdated: __noopListener,
+      onRemoved: __noopListener,
+      onCreated: __noopListener
+    },
+    windows: {
+      async getLastFocused() { return { id: 1 }; }
+    },
+    storage: {
+      session: {
+        async get(key) { return key in __sessionStore ? { [key]: __sessionStore[key] } : {}; },
+        async set(obj) { Object.assign(__sessionStore, obj); },
+        async remove(key) { delete __sessionStore[key]; }
+      }
+    },
+    theme: {
+      async getCurrent() { return {}; }
+    }
+  };
+</script><script>
+  window.addEventListener("load", () => setTimeout(() => {
+    const params = new URLSearchParams(location.search);
+    const search = document.getElementById("search");
+    const setFilter = (value) => { search.value = value; search.dispatchEvent(new Event("input", { bubbles: true })); };
+    if (params.has("filter")) setFilter(params.get("filter"));
+    if (params.has("sort")) { const s = document.getElementById("sort"); s.value = params.get("sort"); s.dispatchEvent(new Event("change", { bubbles: true })); }
+    if (params.has("excludePinned")) { const c = document.getElementById("excludePinned"); c.checked = params.get("excludePinned") !== "0"; c.dispatchEvent(new Event("change", { bubbles: true })); }
+    if (params.get("audit") === "1") {
+      const bar = document.createElement("div");
+      bar.style.cssText = "position:fixed;bottom:0;left:0;right:0;background:#000c;padding:6px;display:flex;gap:8px;z-index:99";
+      const mk = (label, fn) => { const b = document.createElement("button"); b.textContent = label; b.onclick = fn; bar.append(b); };
+      mk("filter: github", () => setFilter("github"));
+      mk("filter: (", () => setFilter("("));
+      mk("filter: *", () => setFilter("*"));
+      mk("filter: eks", () => setFilter("eks"));
+      mk("clear filter", () => setFilter(""));
+      document.body.append(bar);
+    }
+  }, 80));
+</script><script>
+  const __themePalettes = {"light":{"--bg":"#ffffff","--text":"#0b0b0f","--muted":"#6b7280","--line":"#e5e7eb","--card":"#ffffff","--badgeText":"var(--text)","--accent":"#7c3aed","--accent-2":"#a78bfa","--accent-strong":"#5b21b6","--accent-strong-active":"#4c1d95","--accent-contrast":"#ffffff","--danger":"#7c2d12","--danger-bg":"#fee2e2"},"dark":{"--bg":"#0f0f14","--text":"#f5f5f7","--muted":"#9ca3af","--line":"#1f2937","--card":"#111119","--badge":"color-mix(in srgb, var(--accent) 16%, var(--card))","--badgeText":"var(--text)","--accent":"#a78bfa","--accent-2":"#c4b5fd","--accent-strong":"#5b21b6","--accent-strong-active":"#43207e","--accent-contrast":"#ffffff","--danger":"#fecaca","--danger-bg":"#7f1d1d"}};
+  window.addEventListener("load", () => setTimeout(() => {
+    const params = new URLSearchParams(location.search);
+    const theme = params.get("theme");
+    if (theme === "dark" || theme === "light") {
+      const vars = __themePalettes[theme];
+      if (vars && Object.keys(vars).length > 0) {
+        const style = document.createElement("style");
+        const decls = Object.entries(vars).map((entry) => entry[0] + ":" + entry[1]).join(";");
+        style.textContent = ":root{" + decls + ";color-scheme:" + theme + "}";
+        document.head.append(style);
+      }
+    }
+    const expand = params.get("expand");
+    if (expand === "hosts" || expand === "all") {
+      document.querySelectorAll(".hostHeader").forEach((header) => {
+        if (header.getAttribute("aria-expanded") === "false") header.click();
+      });
+    }
+    if (expand === "all") {
+      setTimeout(() => {
+        document.querySelectorAll(".clusterHeader").forEach((header) => {
+          if (!header.classList.contains("clusterHeaderHidden") && header.getAttribute("aria-expanded") === "false") header.click();
+        });
+        window.__shotReady = true;
+      }, 120);
+    } else {
+      window.__shotReady = true;
+    }
+  }, 120));
+  </script><script type="module" src="../../dist/popup.js"></script>
+</body>
+</html>

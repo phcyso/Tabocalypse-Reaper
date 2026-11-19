@@ -1,0 +1,182 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; img-src 'self' https: data: moz-extension:; style-src 'self' 'unsafe-inline';">
+  <title>Tabocalypse Reaper</title>
+  <link rel="stylesheet" href="../../dist/popup.css">
+</head>
+<body>
+  <header class="brandbar">
+    <img src="../../dist/logo.svg" class="brandLogo" alt="" />
+    <div class="brand">
+      <div class="brandName">Tabocalypse Reaper</div>
+      <div class="brandTag small">End your tab chaos with one clean sweep</div>
+    </div>
+    <div class="spacer"></div>
+    <select id="sort" title="Sort order">
+      <option value="count">Sort: Most tabs</option>
+      <option value="alpha">Sort: A–Z</option>
+      <option value="stale">Sort: Recently stale first</option>
+    </select>
+  </header>
+
+  <section class="toolbar">
+    <input id="search" type="search" placeholder="Filter host/path/title ( / to focus )" aria-label="Filter">
+    <label class="opt"><input type="checkbox" id="excludePinned" checked> Exclude pinned</label>
+    <button id="refresh" title="Reload open tabs">Refresh</button>
+    <button id="refreshHint" class="refreshHint" hidden title="Tabs changed — the visible order may be outdated">Sort outdated — Refresh</button>
+  </section>
+
+  <div id="stats"></div>
+  <div id="tree" class="tree"></div>
+
+  <div id="toast" class="toast" hidden>
+    <span id="toastText"></span>
+    <button id="toastAction" class="toastAction">Undo</button>
+  </div>
+
+  <template id="hostTemplate">
+    <section class="hostCard">
+      <header class="hostHeader" tabindex="0" role="button" aria-expanded="false">
+        <span class="twisty" aria-hidden="true">▸</span>
+        <img class="ico hostIco" alt="" referrerpolicy="no-referrer" />
+        <span class="icoFallback hostIcoFallback" aria-hidden="true" hidden></span>
+        <span class="hostName"></span>
+        <span class="badge"></span>
+        <span class="pinChip" hidden></span>
+        <span class="winChip" hidden></span>
+        <div class="spacer"></div>
+        <button class="staleButton" title="Close tabs older than 24h" hidden>Reap stale</button>
+        <button class="dupButton" title="Close duplicate tabs — keeps the newest copy" hidden>Close dups</button>
+        <button class="close reapButton" title="Close all in host">Reap</button>
+      </header>
+      <div class="hostBody"></div>
+    </section>
+  </template>
+
+  <template id="clusterTemplate">
+    <div class="cluster">
+      <header class="clusterHeader" tabindex="0" role="button" aria-expanded="false">
+        <span class="twisty" aria-hidden="true">▸</span>
+        <img class="ico clusterIco" alt="" referrerpolicy="no-referrer" />
+        <span class="icoFallback clusterIcoFallback" aria-hidden="true" hidden></span>
+        <span class="clusterName"></span>
+        <span class="badge small"></span>
+        <span class="pinChip" hidden></span>
+        <span class="dupChip" hidden></span>
+        <div class="spacer"></div>
+        <button class="close reapButton" title="Close cluster">Reap</button>
+      </header>
+      <div class="clusterBody"></div>
+    </div>
+  </template>
+
+  <template id="tabTemplate">
+    <div class="tab">
+      <img class="ico" alt="" referrerpolicy="no-referrer" />
+      <span class="icoFallback tabIcoFallback" aria-hidden="true" hidden></span>
+      <a class="title" target="_self"></a>
+      <span class="path small"></span>
+      <span class="ageChip" hidden></span>
+      <span class="winChip" hidden></span>
+      <span class="dupChip" hidden></span>
+      <button class="x" title="Close tab">✕</button>
+    </div>
+  </template>
+
+  <template id="soloTemplate">
+    <div class="soloRow">
+      <img class="ico soloIco" alt="" referrerpolicy="no-referrer" />
+      <span class="icoFallback soloIcoFallback" aria-hidden="true" hidden></span>
+      <span class="soloHost small"></span>
+      <a class="title soloTitle" target="_self"></a>
+      <span class="path small"></span>
+      <span class="ageChip" hidden></span>
+      <span class="winChip" hidden></span>
+      <button class="x" title="Close tab">✕</button>
+    </div>
+  </template>
+
+  <script>
+  const __tabs = [{"id":9001,"url":"file:///tmp/reaper-readme.md","title":"README (file://)","pinned":false,"windowId":1,"favIconUrl":""},{"id":9002,"url":"data:text/html,\u003ch1>hello\u003c/h1>","title":"data URL tab","pinned":false,"windowId":1,"favIconUrl":""},{"id":9003,"url":"about:blank","title":"about:blank","pinned":false,"windowId":1,"favIconUrl":""},{"id":9004,"url":"about:newtab","title":"New Tab","pinned":false,"windowId":1,"favIconUrl":""},{"id":9005,"url":"moz-extension://fake-uuid/popup.html","title":"extension page","pinned":false,"windowId":1,"favIconUrl":""},{"id":9006,"url":"chrome://settings","title":"Settings","pinned":false,"windowId":1,"favIconUrl":""},{"id":9010,"url":"https://xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.com/page","title":"Extremely long host name (200 chars)","pinned":false,"windowId":1,"favIconUrl":""},{"id":9011,"url":"https://github.com/nihongo/docs","title":"日本語のタイトル — テストページの表示確認","pinned":false,"windowId":1,"favIconUrl":""},{"id":9012,"url":"https://example.org/arabic","title":"اختبار الصفحة من اليمين إلى اليسار","pinned":false,"windowId":1,"favIconUrl":""},{"id":9013,"url":"https://duckduckgo.com/?q=emoji","title":"🔥🚀💯 Emoji Party 🎉 (200 chars: 🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉)","pinned":false,"windowId":1,"favIconUrl":""},{"id":9014,"url":"https://example.com/empty-title","title":"","pinned":false,"windowId":1,"favIconUrl":""},{"id":9015,"url":"https://example.com/very-long-title-suffix/suffix/suffix/suffix/suffix/suffix/suffix/suffix/suffix/suffix/","title":"A very long tab title that keeps going and going and going and going and going and going and going and going until it must truncate somewhere around here","pinned":false,"windowId":1,"favIconUrl":""},{"id":9020,"url":"https://github.com/phcyso","title":"phcyso · GitHub (org root, no repo)","pinned":false,"windowId":1,"favIconUrl":""},{"id":9021,"url":"https://github.com/phcyso/Tabocalypse-Reaper","title":"GitHub - phcyso/Tabocalypse-Reaper","pinned":false,"windowId":1,"favIconUrl":""},{"id":9022,"url":"https://github.com/phcyso/Tabocalypse-Reaper/pull/1#discussion_r123","title":"PR #1 discussion","pinned":false,"windowId":1,"favIconUrl":""},{"id":9023,"url":"https://github.com/phcyso/Tabocalypse-Reaper/issues/42","title":"Issue #42","pinned":false,"windowId":1,"favIconUrl":""},{"id":9024,"url":"https://raw.githubusercontent.com/phcyso/Tabocalypse-Reaper/main/README.md","title":"README.md (raw)","pinned":false,"windowId":1,"favIconUrl":""},{"id":9025,"url":"https://gist.github.com/someuser/abc123def","title":"A gist","pinned":false,"windowId":1,"favIconUrl":""},{"id":9026,"url":"https://notgithub.com/org/repo/tree/main","title":"endsWith('github.com') probe","pinned":false,"windowId":1,"favIconUrl":""},{"id":9030,"url":"https://aws.amazon.com/","title":"AWS Cloud Services","pinned":false,"windowId":1,"favIconUrl":""},{"id":9031,"url":"https://console.aws.amazon.com/eks/home","title":"EKS console","pinned":false,"windowId":1,"favIconUrl":""},{"id":9032,"url":"https://console.aws.amazon.com/cloudwatch/home","title":"CloudWatch console","pinned":false,"windowId":1,"favIconUrl":""},{"id":9033,"url":"https://docs.aws.amazon.com/eks/latest/userguide/what-is.html","title":"What is Amazon EKS?","pinned":false,"windowId":1,"favIconUrl":""},{"id":9034,"url":"https://docs.aws.amazon.com/lambda/latest/dg/welcome.html","title":"Lambda developer guide","pinned":false,"windowId":1,"favIconUrl":""},{"id":9100,"url":"https://nine.example.com/a/1","title":"Nine host tab 1","pinned":false,"windowId":1,"favIconUrl":""},{"id":9101,"url":"https://nine.example.com/a/2","title":"Nine host tab 2","pinned":false,"windowId":1,"favIconUrl":""},{"id":9102,"url":"https://nine.example.com/a/3","title":"Nine host tab 3","pinned":false,"windowId":1,"favIconUrl":""},{"id":9103,"url":"https://nine.example.com/a/4","title":"Nine host tab 4","pinned":false,"windowId":1,"favIconUrl":""},{"id":9104,"url":"https://nine.example.com/a/5","title":"Nine host tab 5","pinned":false,"windowId":1,"favIconUrl":""},{"id":9105,"url":"https://nine.example.com/a/6","title":"Nine host tab 6","pinned":false,"windowId":1,"favIconUrl":""},{"id":9106,"url":"https://nine.example.com/a/7","title":"Nine host tab 7","pinned":false,"windowId":1,"favIconUrl":""},{"id":9107,"url":"https://nine.example.com/a/8","title":"Nine host tab 8","pinned":false,"windowId":1,"favIconUrl":""},{"id":9108,"url":"https://nine.example.com/a/9","title":"Nine host tab 9","pinned":false,"windowId":1,"favIconUrl":""},{"id":9200,"url":"https://ten.example.com/b/1","title":"Ten host tab 1","pinned":false,"windowId":1,"favIconUrl":""},{"id":9201,"url":"https://ten.example.com/b/2","title":"Ten host tab 2","pinned":false,"windowId":1,"favIconUrl":""},{"id":9202,"url":"https://ten.example.com/b/3","title":"Ten host tab 3","pinned":false,"windowId":1,"favIconUrl":""},{"id":9203,"url":"https://ten.example.com/b/4","title":"Ten host tab 4","pinned":false,"windowId":1,"favIconUrl":""},{"id":9204,"url":"https://ten.example.com/b/5","title":"Ten host tab 5","pinned":false,"windowId":1,"favIconUrl":""},{"id":9205,"url":"https://ten.example.com/b/6","title":"Ten host tab 6","pinned":false,"windowId":1,"favIconUrl":""},{"id":9206,"url":"https://ten.example.com/b/7","title":"Ten host tab 7","pinned":false,"windowId":1,"favIconUrl":""},{"id":9207,"url":"https://ten.example.com/b/8","title":"Ten host tab 8","pinned":false,"windowId":1,"favIconUrl":""},{"id":9208,"url":"https://ten.example.com/b/9","title":"Ten host tab 9","pinned":false,"windowId":1,"favIconUrl":""},{"id":9209,"url":"https://ten.example.com/b/10","title":"Ten host tab 10","pinned":false,"windowId":1,"favIconUrl":""},{"id":9300,"url":"https://duckduckgo.com/?q=window-one","title":"DDG search (window 1)","pinned":false,"windowId":1,"favIconUrl":""},{"id":9301,"url":"https://duckduckgo.com/?q=window-two","title":"DDG search (window 2)","pinned":false,"windowId":2,"favIconUrl":""},{"id":9302,"url":"https://github.com/octocat/Spoon-Knife","title":"GitHub Spoon-Knife (window 2)","pinned":false,"windowId":2,"favIconUrl":""},{"id":9400,"url":"https://lonely.example.org/only","title":"Single tab on this host","pinned":false,"windowId":1,"favIconUrl":""},{"id":9500,"url":"https://mail.example.com/inbox","title":"Webmail (pinned)","pinned":true,"windowId":1,"favIconUrl":""},{"id":9501,"url":"https://calendar.example.com/","title":"Calendar (pinned)","pinned":true,"windowId":1,"favIconUrl":""},{"id":9600,"url":"https://bulk.example.com/item/1","title":"Bulk item 1","pinned":false,"windowId":1,"favIconUrl":""},{"id":9601,"url":"https://bulk.example.com/item/2","title":"Bulk item 2","pinned":false,"windowId":1,"favIconUrl":""},{"id":9602,"url":"https://bulk.example.com/item/3","title":"Bulk item 3","pinned":false,"windowId":1,"favIconUrl":""},{"id":9603,"url":"https://bulk.example.com/item/4","title":"Bulk item 4","pinned":false,"windowId":1,"favIconUrl":""},{"id":9604,"url":"https://bulk.example.com/item/5","title":"Bulk item 5","pinned":false,"windowId":1,"favIconUrl":""},{"id":9605,"url":"https://bulk.example.com/item/6","title":"Bulk item 6","pinned":false,"windowId":1,"favIconUrl":""},{"id":9606,"url":"https://bulk.example.com/item/7","title":"Bulk item 7","pinned":false,"windowId":1,"favIconUrl":""},{"id":9607,"url":"https://bulk.example.com/item/8","title":"Bulk item 8","pinned":false,"windowId":1,"favIconUrl":""},{"id":9608,"url":"https://bulk.example.com/item/9","title":"Bulk item 9","pinned":false,"windowId":1,"favIconUrl":""},{"id":9609,"url":"https://bulk.example.com/item/10","title":"Bulk item 10","pinned":false,"windowId":1,"favIconUrl":""},{"id":9610,"url":"https://bulk.example.com/item/11","title":"Bulk item 11","pinned":false,"windowId":1,"favIconUrl":""},{"id":9611,"url":"https://bulk.example.com/item/12","title":"Bulk item 12","pinned":false,"windowId":1,"favIconUrl":""},{"id":9700,"url":"https://filler0.example.com/page/0","title":"Filler 0","pinned":false,"windowId":1,"favIconUrl":""},{"id":9701,"url":"https://filler1.example.com/page/1","title":"Filler 1","pinned":false,"windowId":1,"favIconUrl":""},{"id":9702,"url":"https://filler2.example.com/page/2","title":"Filler 2","pinned":false,"windowId":1,"favIconUrl":""},{"id":9703,"url":"https://filler3.example.com/page/3","title":"Filler 3","pinned":false,"windowId":1,"favIconUrl":""},{"id":9704,"url":"https://filler4.example.com/page/4","title":"Filler 4","pinned":false,"windowId":1,"favIconUrl":""},{"id":9705,"url":"https://filler5.example.com/page/5","title":"Filler 5","pinned":false,"windowId":1,"favIconUrl":""},{"id":9706,"url":"https://filler6.example.com/page/6","title":"Filler 6","pinned":false,"windowId":1,"favIconUrl":""},{"id":9707,"url":"https://filler7.example.com/page/7","title":"Filler 7","pinned":false,"windowId":1,"favIconUrl":""},{"id":9708,"url":"https://filler8.example.com/page/8","title":"Filler 8","pinned":false,"windowId":1,"favIconUrl":""},{"id":9709,"url":"https://filler9.example.com/page/9","title":"Filler 9","pinned":false,"windowId":1,"favIconUrl":""},{"id":9710,"url":"https://filler10.example.com/page/10","title":"Filler 10","pinned":false,"windowId":1,"favIconUrl":""},{"id":9711,"url":"https://filler11.example.com/page/11","title":"Filler 11","pinned":false,"windowId":1,"favIconUrl":""},{"id":9712,"url":"https://filler12.example.com/page/12","title":"Filler 12","pinned":false,"windowId":1,"favIconUrl":""},{"id":9713,"url":"https://filler13.example.com/page/13","title":"Filler 13","pinned":false,"windowId":1,"favIconUrl":""},{"id":9714,"url":"https://filler14.example.com/page/14","title":"Filler 14","pinned":false,"windowId":1,"favIconUrl":""},{"id":9715,"url":"https://filler15.example.com/page/15","title":"Filler 15","pinned":false,"windowId":1,"favIconUrl":""},{"id":9716,"url":"https://filler16.example.com/page/16","title":"Filler 16","pinned":false,"windowId":1,"favIconUrl":""},{"id":9717,"url":"https://filler17.example.com/page/17","title":"Filler 17","pinned":false,"windowId":1,"favIconUrl":""},{"id":9718,"url":"https://filler18.example.com/page/18","title":"Filler 18","pinned":false,"windowId":1,"favIconUrl":""},{"id":9719,"url":"https://filler19.example.com/page/19","title":"Filler 19","pinned":false,"windowId":1,"favIconUrl":""},{"id":9720,"url":"https://filler20.example.com/page/20","title":"Filler 20","pinned":false,"windowId":1,"favIconUrl":""},{"id":9721,"url":"https://filler21.example.com/page/21","title":"Filler 21","pinned":false,"windowId":1,"favIconUrl":""},{"id":9722,"url":"https://filler22.example.com/page/22","title":"Filler 22","pinned":false,"windowId":1,"favIconUrl":""},{"id":9723,"url":"https://filler23.example.com/page/23","title":"Filler 23","pinned":false,"windowId":1,"favIconUrl":""},{"id":9724,"url":"https://filler24.example.com/page/24","title":"Filler 24","pinned":false,"windowId":1,"favIconUrl":""},{"id":9725,"url":"https://filler25.example.com/page/25","title":"Filler 25","pinned":false,"windowId":1,"favIconUrl":""},{"id":9726,"url":"https://filler26.example.com/page/26","title":"Filler 26","pinned":false,"windowId":1,"favIconUrl":""},{"id":9727,"url":"https://filler27.example.com/page/27","title":"Filler 27","pinned":false,"windowId":1,"favIconUrl":""},{"id":9728,"url":"https://filler28.example.com/page/28","title":"Filler 28","pinned":false,"windowId":1,"favIconUrl":""},{"id":9729,"url":"https://filler29.example.com/page/29","title":"Filler 29","pinned":false,"windowId":1,"favIconUrl":""},{"id":9730,"url":"https://filler30.example.com/page/30","title":"Filler 30","pinned":false,"windowId":1,"favIconUrl":""},{"id":9731,"url":"https://filler31.example.com/page/31","title":"Filler 31","pinned":false,"windowId":1,"favIconUrl":""},{"id":9732,"url":"https://filler32.example.com/page/32","title":"Filler 32","pinned":false,"windowId":1,"favIconUrl":""},{"id":9733,"url":"https://filler33.example.com/page/33","title":"Filler 33","pinned":false,"windowId":1,"favIconUrl":""},{"id":9734,"url":"https://filler34.example.com/page/34","title":"Filler 34","pinned":false,"windowId":1,"favIconUrl":""},{"id":9735,"url":"https://filler35.example.com/page/35","title":"Filler 35","pinned":false,"windowId":1,"favIconUrl":""},{"id":9736,"url":"https://filler36.example.com/page/36","title":"Filler 36","pinned":false,"windowId":1,"favIconUrl":""},{"id":9737,"url":"https://filler37.example.com/page/37","title":"Filler 37","pinned":false,"windowId":1,"favIconUrl":""},{"id":9738,"url":"https://filler38.example.com/page/38","title":"Filler 38","pinned":false,"windowId":1,"favIconUrl":""},{"id":9739,"url":"https://filler39.example.com/page/39","title":"Filler 39","pinned":false,"windowId":1,"favIconUrl":""},{"id":9800,"url":"https://busyhost.example.com/item/0","title":"Busy host item 0","pinned":false,"windowId":1,"favIconUrl":""},{"id":9801,"url":"https://busyhost.example.com/item/1","title":"Busy host item 1","pinned":false,"windowId":1,"favIconUrl":""},{"id":9802,"url":"https://busyhost.example.com/item/2","title":"Busy host item 2","pinned":false,"windowId":1,"favIconUrl":""},{"id":9803,"url":"https://busyhost.example.com/item/3","title":"Busy host item 3","pinned":false,"windowId":1,"favIconUrl":""},{"id":9804,"url":"https://busyhost.example.com/item/4","title":"Busy host item 4","pinned":false,"windowId":1,"favIconUrl":""},{"id":9805,"url":"https://busyhost.example.com/item/5","title":"Busy host item 5","pinned":false,"windowId":1,"favIconUrl":""},{"id":9806,"url":"https://busyhost.example.com/item/6","title":"Busy host item 6","pinned":false,"windowId":1,"favIconUrl":""},{"id":9807,"url":"https://busyhost.example.com/item/7","title":"Busy host item 7","pinned":false,"windowId":1,"favIconUrl":""},{"id":9808,"url":"https://busyhost.example.com/item/8","title":"Busy host item 8","pinned":false,"windowId":1,"favIconUrl":""},{"id":9809,"url":"https://busyhost.example.com/item/9","title":"Busy host item 9","pinned":false,"windowId":1,"favIconUrl":""},{"id":9810,"url":"https://busyhost.example.com/item/10","title":"Busy host item 10","pinned":false,"windowId":1,"favIconUrl":""},{"id":9811,"url":"https://busyhost.example.com/item/11","title":"Busy host item 11","pinned":false,"windowId":1,"favIconUrl":""},{"id":9812,"url":"https://busyhost.example.com/item/12","title":"Busy host item 12","pinned":false,"windowId":1,"favIconUrl":""},{"id":9813,"url":"https://busyhost.example.com/item/13","title":"Busy host item 13","pinned":false,"windowId":1,"favIconUrl":""},{"id":9814,"url":"https://busyhost.example.com/item/14","title":"Busy host item 14","pinned":false,"windowId":1,"favIconUrl":""},{"id":9815,"url":"https://busyhost.example.com/item/15","title":"Busy host item 15","pinned":false,"windowId":1,"favIconUrl":""},{"id":9816,"url":"https://busyhost.example.com/item/16","title":"Busy host item 16","pinned":false,"windowId":1,"favIconUrl":""},{"id":9817,"url":"https://busyhost.example.com/item/17","title":"Busy host item 17","pinned":false,"windowId":1,"favIconUrl":""},{"id":9818,"url":"https://busyhost.example.com/item/18","title":"Busy host item 18","pinned":false,"windowId":1,"favIconUrl":""},{"id":9819,"url":"https://busyhost.example.com/item/19","title":"Busy host item 19","pinned":false,"windowId":1,"favIconUrl":""},{"id":9820,"url":"https://busyhost.example.com/item/20","title":"Busy host item 20","pinned":false,"windowId":1,"favIconUrl":""},{"id":9821,"url":"https://busyhost.example.com/item/21","title":"Busy host item 21","pinned":false,"windowId":1,"favIconUrl":""},{"id":9822,"url":"https://busyhost.example.com/item/22","title":"Busy host item 22","pinned":false,"windowId":1,"favIconUrl":""},{"id":9823,"url":"https://busyhost.example.com/item/23","title":"Busy host item 23","pinned":false,"windowId":1,"favIconUrl":""},{"id":9824,"url":"https://busyhost.example.com/item/24","title":"Busy host item 24","pinned":false,"windowId":1,"favIconUrl":""},{"id":9825,"url":"https://busyhost.example.com/item/25","title":"Busy host item 25","pinned":false,"windowId":1,"favIconUrl":""},{"id":9826,"url":"https://busyhost.example.com/item/26","title":"Busy host item 26","pinned":false,"windowId":1,"favIconUrl":""},{"id":9827,"url":"https://busyhost.example.com/item/27","title":"Busy host item 27","pinned":false,"windowId":1,"favIconUrl":""},{"id":9828,"url":"https://busyhost.example.com/item/28","title":"Busy host item 28","pinned":false,"windowId":1,"favIconUrl":""},{"id":9829,"url":"https://busyhost.example.com/item/29","title":"Busy host item 29","pinned":false,"windowId":1,"favIconUrl":""},{"id":9830,"url":"https://busyhost.example.com/item/30","title":"Busy host item 30","pinned":false,"windowId":1,"favIconUrl":""},{"id":9831,"url":"https://busyhost.example.com/item/31","title":"Busy host item 31","pinned":false,"windowId":1,"favIconUrl":""},{"id":9832,"url":"https://busyhost.example.com/item/32","title":"Busy host item 32","pinned":false,"windowId":1,"favIconUrl":""},{"id":9833,"url":"https://busyhost.example.com/item/33","title":"Busy host item 33","pinned":false,"windowId":1,"favIconUrl":""},{"id":9834,"url":"https://busyhost.example.com/item/34","title":"Busy host item 34","pinned":false,"windowId":1,"favIconUrl":""},{"id":9835,"url":"https://busyhost.example.com/item/35","title":"Busy host item 35","pinned":false,"windowId":1,"favIconUrl":""},{"id":9836,"url":"https://busyhost.example.com/item/36","title":"Busy host item 36","pinned":false,"windowId":1,"favIconUrl":""},{"id":9837,"url":"https://busyhost.example.com/item/37","title":"Busy host item 37","pinned":false,"windowId":1,"favIconUrl":""},{"id":9838,"url":"https://busyhost.example.com/item/38","title":"Busy host item 38","pinned":false,"windowId":1,"favIconUrl":""},{"id":9839,"url":"https://busyhost.example.com/item/39","title":"Busy host item 39","pinned":false,"windowId":1,"favIconUrl":""},{"id":9840,"url":"https://busyhost.example.com/item/40","title":"Busy host item 40","pinned":false,"windowId":1,"favIconUrl":""},{"id":9841,"url":"https://busyhost.example.com/item/41","title":"Busy host item 41","pinned":false,"windowId":1,"favIconUrl":""},{"id":9842,"url":"https://busyhost.example.com/item/42","title":"Busy host item 42","pinned":false,"windowId":1,"favIconUrl":""},{"id":9843,"url":"https://busyhost.example.com/item/43","title":"Busy host item 43","pinned":false,"windowId":1,"favIconUrl":""},{"id":9844,"url":"https://busyhost.example.com/item/44","title":"Busy host item 44","pinned":false,"windowId":1,"favIconUrl":""},{"id":9845,"url":"https://busyhost.example.com/item/45","title":"Busy host item 45","pinned":false,"windowId":1,"favIconUrl":""},{"id":9846,"url":"https://busyhost.example.com/item/46","title":"Busy host item 46","pinned":false,"windowId":1,"favIconUrl":""},{"id":9847,"url":"https://busyhost.example.com/item/47","title":"Busy host item 47","pinned":false,"windowId":1,"favIconUrl":""},{"id":9848,"url":"https://busyhost.example.com/item/48","title":"Busy host item 48","pinned":false,"windowId":1,"favIconUrl":""},{"id":9849,"url":"https://busyhost.example.com/item/49","title":"Busy host item 49","pinned":false,"windowId":1,"favIconUrl":""},{"id":9850,"url":"https://busyhost.example.com/item/50","title":"Busy host item 50","pinned":false,"windowId":1,"favIconUrl":""},{"id":9851,"url":"https://busyhost.example.com/item/51","title":"Busy host item 51","pinned":false,"windowId":1,"favIconUrl":""},{"id":9852,"url":"https://busyhost.example.com/item/52","title":"Busy host item 52","pinned":false,"windowId":1,"favIconUrl":""},{"id":9853,"url":"https://busyhost.example.com/item/53","title":"Busy host item 53","pinned":false,"windowId":1,"favIconUrl":""},{"id":9854,"url":"https://busyhost.example.com/item/54","title":"Busy host item 54","pinned":false,"windowId":1,"favIconUrl":""},{"id":9855,"url":"https://busyhost.example.com/item/55","title":"Busy host item 55","pinned":false,"windowId":1,"favIconUrl":""},{"id":9856,"url":"https://busyhost.example.com/item/56","title":"Busy host item 56","pinned":false,"windowId":1,"favIconUrl":""},{"id":9857,"url":"https://busyhost.example.com/item/57","title":"Busy host item 57","pinned":false,"windowId":1,"favIconUrl":""},{"id":9858,"url":"https://busyhost.example.com/item/58","title":"Busy host item 58","pinned":false,"windowId":1,"favIconUrl":""},{"id":9859,"url":"https://busyhost.example.com/item/59","title":"Busy host item 59","pinned":false,"windowId":1,"favIconUrl":""}];
+  const __noopListener = { addListener() {}, removeListener() {} };
+  const __sessionStore = {};
+  window.browser = {
+    tabs: {
+      async query() { return JSON.parse(JSON.stringify(__tabs)); },
+      async remove(ids) { console.info("stub remove", ids); },
+      async update(id, info) { console.info("stub update", id, info); },
+      async create(info) { console.info("stub create", info); return { id: -1 }; },
+      onUpdated: __noopListener,
+      onRemoved: __noopListener,
+      onCreated: __noopListener
+    },
+    windows: {
+      async getLastFocused() { return { id: 1 }; }
+    },
+    storage: {
+      session: {
+        async get(key) { return key in __sessionStore ? { [key]: __sessionStore[key] } : {}; },
+        async set(obj) { Object.assign(__sessionStore, obj); },
+        async remove(key) { delete __sessionStore[key]; }
+      }
+    },
+    theme: {
+      async getCurrent() { return {}; }
+    }
+  };
+</script><script>
+  window.addEventListener("load", () => setTimeout(() => {
+    const params = new URLSearchParams(location.search);
+    const search = document.getElementById("search");
+    const setFilter = (value) => { search.value = value; search.dispatchEvent(new Event("input", { bubbles: true })); };
+    if (params.has("filter")) setFilter(params.get("filter"));
+    if (params.has("sort")) { const s = document.getElementById("sort"); s.value = params.get("sort"); s.dispatchEvent(new Event("change", { bubbles: true })); }
+    if (params.has("excludePinned")) { const c = document.getElementById("excludePinned"); c.checked = params.get("excludePinned") !== "0"; c.dispatchEvent(new Event("change", { bubbles: true })); }
+    if (params.get("audit") === "1") {
+      const bar = document.createElement("div");
+      bar.style.cssText = "position:fixed;bottom:0;left:0;right:0;background:#000c;padding:6px;display:flex;gap:8px;z-index:99";
+      const mk = (label, fn) => { const b = document.createElement("button"); b.textContent = label; b.onclick = fn; bar.append(b); };
+      mk("filter: github", () => setFilter("github"));
+      mk("filter: (", () => setFilter("("));
+      mk("filter: *", () => setFilter("*"));
+      mk("filter: eks", () => setFilter("eks"));
+      mk("clear filter", () => setFilter(""));
+      document.body.append(bar);
+    }
+  }, 80));
+</script><script>
+  const __themePalettes = {"light":{"--bg":"#ffffff","--text":"#0b0b0f","--muted":"#6b7280","--line":"#e5e7eb","--card":"#ffffff","--badgeText":"var(--text)","--accent":"#7c3aed","--accent-2":"#a78bfa","--accent-strong":"#5b21b6","--accent-strong-active":"#4c1d95","--accent-contrast":"#ffffff","--danger":"#7c2d12","--danger-bg":"#fee2e2"},"dark":{"--bg":"#0f0f14","--text":"#f5f5f7","--muted":"#9ca3af","--line":"#1f2937","--card":"#111119","--badge":"color-mix(in srgb, var(--accent) 16%, var(--card))","--badgeText":"var(--text)","--accent":"#a78bfa","--accent-2":"#c4b5fd","--accent-strong":"#5b21b6","--accent-strong-active":"#43207e","--accent-contrast":"#ffffff","--danger":"#fecaca","--danger-bg":"#7f1d1d"}};
+  window.addEventListener("load", () => setTimeout(() => {
+    const params = new URLSearchParams(location.search);
+    const theme = params.get("theme");
+    if (theme === "dark" || theme === "light") {
+      const vars = __themePalettes[theme];
+      if (vars && Object.keys(vars).length > 0) {
+        const style = document.createElement("style");
+        const decls = Object.entries(vars).map((entry) => entry[0] + ":" + entry[1]).join(";");
+        style.textContent = ":root{" + decls + ";color-scheme:" + theme + "}";
+        document.head.append(style);
+      }
+    }
+    const expand = params.get("expand");
+    if (expand === "hosts" || expand === "all") {
+      document.querySelectorAll(".hostHeader").forEach((header) => {
+        if (header.getAttribute("aria-expanded") === "false") header.click();
+      });
+    }
+    if (expand === "all") {
+      setTimeout(() => {
+        document.querySelectorAll(".clusterHeader").forEach((header) => {
+          if (!header.classList.contains("clusterHeaderHidden") && header.getAttribute("aria-expanded") === "false") header.click();
+        });
+        window.__shotReady = true;
+      }, 120);
+    } else {
+      window.__shotReady = true;
+    }
+  }, 120));
+  </script><script type="module" src="../../dist/popup.js"></script>
+</body>
+</html>
