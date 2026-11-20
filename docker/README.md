@@ -1,6 +1,7 @@
 # Docker setup — local dev + store screenshots (headed Firefox testing)
 
-Companion to `docs/headed-testing-investigation.md` (§ "Docker setup"). Two
+Companion to the headed-testing investigation note (kept uncommitted in
+`scratch/`). Two
 containers, one repo bind-mount, **no baked extension anywhere** — the dev
 bind-mount of `dist/` is the only delivery path:
 
@@ -126,7 +127,8 @@ docker compose -f docker/docker-compose.yml exec agent bash -lc '
 
 ## Marketing screenshot suite
 
-`docker/shoot.py` + `docker/scenarios/*.json` (see `docs/marketing-scenarios.md`):
+`docker/shoot.py` + `docker/scenarios/*.json` (scenario catalog + usability
+findings in the marketing note under `scratch/`):
 data-driven themed scenario shots via the same profile/marionette stack, plus
 `docker/make-amo.py` for AMO-ready 1280x800 composites. Outputs land in
 `artifacts/marketing/`. `docker/test-selenium.py` remains the CI validation

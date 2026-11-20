@@ -105,6 +105,17 @@ findings, agent hand-off briefs, working notes, throwaway repro scripts, and
 scratch fixtures. Nothing in it is ever committed — durable knowledge belongs in
 AGENT.md, `docs/`, or the README once it has proven useful.
 
+Work and plan documents (investigations, scenario catalogs, design proposals)
+belong HERE, not in `docs/` — three were accidentally committed to history and
+have been rewritten out (2026-11-19); their content now lives in:
+- `scratch/2026-11-19-headed-testing-investigation.md` — headed-testing
+  approaches/comparison (the Docker suite itself is committed under `docker/`,
+  usage in `docker/README.md`)
+- `scratch/2026-11-19-marketing-scenarios.md` — scenario catalog, AMO
+  screenshot requirements, usability findings
+- `scratch/2026-11-19-tab-groups-and-windows-design.md` — tab-group /
+  multi-window design; decisions are implemented in the extension
+
 - Name files descriptively with a date prefix, e.g.
   `scratch/2026-11-09-usability-findings.md` or `scratch/2026-11-09-audit-brief.md`.
 - Folder exists only after first use (`mkdir -p scratch`); don't track a placeholder.

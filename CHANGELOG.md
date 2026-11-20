@@ -44,9 +44,9 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); dates ar
     + JSON manifests.
   - `docker/make-amo.py` — AMO-ready 1280×800 (1.6:1) composites.
   - `docker/click`, `docker/screenshot` — thin exec wrappers for agents.
-- Docs: `docs/headed-testing-investigation.md` (headed-testing approaches,
-  comparison, recommendation) and `docs/marketing-scenarios.md` (scenario
-  catalog, AMO screenshot requirements with sources, usability findings).
+- Docs: headed-testing investigation and the marketing scenario catalog
+  (scenario list, AMO screenshot requirements with sources, usability
+  findings) — planning notes, kept uncommitted in `scratch/`.
 - `CHANGELOG.md` (this file).
 
 ### Changed
