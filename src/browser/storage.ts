@@ -15,6 +15,8 @@ export interface ReapedTab {
   windowId: number;
   /** Firefox tab-group id at reap time; best-effort regrouping on Undo. */
   groupId?: number | null;
+  /** Container cookie store id at reap time; Undo reopens in the same container. */
+  cookieStoreId?: string;
 }
 
 /** The last bulk reap, kept in session storage so Undo survives popup round-trips. */

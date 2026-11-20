@@ -47,6 +47,7 @@ export function buildTabModel(
       lastAccessed: tab.lastAccessed ?? now,
       active: tab.active ?? false,
       groupId: tab.groupId ?? null,
+      cookieStoreId: tab.cookieStoreId || "firefox-default",
     });
 
     clusterNode.ids.add(tab.id);

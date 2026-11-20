@@ -33,6 +33,7 @@ export async function queryOpenTabs(options?: { windowId?: number }): Promise<Ta
         lastAccessed: accessTime(tab),
         active: Boolean(tab.active),
         groupId: typeof rawGroupId === "number" ? rawGroupId : null,
+        cookieStoreId: typeof tab.cookieStoreId === "string" ? tab.cookieStoreId : "firefox-default",
       };
     });
 }
@@ -98,6 +99,7 @@ export interface ReopenedTab {
   title: string;
   pinned: boolean;
   windowId: number;
+  cookieStoreId?: string;
 }
 
 /**
@@ -115,6 +117,7 @@ export async function reopenTab(tab: ReopenedTab): Promise<number | null> {
       active: false,
       pinned: tab.pinned,
       windowId: tab.windowId,
+      cookieStoreId: tab.cookieStoreId,
     });
     return typeof created?.id === "number" ? created.id : null;
   } catch {

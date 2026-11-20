@@ -9,6 +9,8 @@ export interface DuplicateCandidate {
   active: boolean;
   /** Firefox tab-group id; null when ungrouped or runtime lacks the API. */
   groupId?: number | null;
+  /** Container cookie store id; "firefox-default" when uncontained. */
+  cookieStoreId?: string;
 }
 
 export interface DuplicateGroup {
@@ -65,6 +67,16 @@ function sameGroupPlacement(tabs: readonly DuplicateCandidate[]): boolean {
 }
 
 /**
+ * Same idea for containers: copies in DIFFERENT containers are deliberate
+ * isolation (e.g. banking inside the Banking container) — never auto-suggest
+ * closing them. Copies that are all uncontained count as "same place".
+ */
+function sameContainerPlacement(tabs: readonly DuplicateCandidate[]): boolean {
+  const first = tabs[0]?.cookieStoreId ?? "firefox-default";
+  return tabs.every((tab) => (tab.cookieStoreId ?? "firefox-default") === first);
+}
+
+/**
  * IDs of duplicate tabs a "Close duplicates" action may close: every non-keeper
  * copy that is not pinned (pinned tabs are deliberately-kept state and survive
  * bulk actions, exactly like host/cluster Reap — audit finding F-5) and that
@@ -74,7 +86,7 @@ function sameGroupPlacement(tabs: readonly DuplicateCandidate[]): boolean {
 export function closableDuplicateIds(tabs: readonly DuplicateCandidate[]): number[] {
   const closable: number[] = [];
   for (const group of findDuplicateGroups(tabs)) {
-    if (!sameGroupPlacement(group.tabs)) {
+    if (!sameGroupPlacement(group.tabs) || !sameContainerPlacement(group.tabs)) {
       continue;
     }
     const keeper = pickDuplicateKeeper(group.tabs);
@@ -112,6 +124,24 @@ export function crossGroupDuplicateIds(tabs: readonly DuplicateCandidate[]): num
   const ids: number[] = [];
   for (const group of findDuplicateGroups(tabs)) {
     if (sameGroupPlacement(group.tabs)) {
+      continue;
+    }
+    for (const tab of group.tabs) {
+      ids.push(tab.id);
+    }
+  }
+  return ids;
+}
+
+/**
+ * Tab IDs whose duplicate copies live in a DIFFERENT container than the rest
+ * of the group: informational chip, never auto-closable (mirror of
+ * crossGroupDuplicateIds for containers).
+ */
+export function crossContainerDuplicateIds(tabs: readonly DuplicateCandidate[]): number[] {
+  const ids: number[] = [];
+  for (const group of findDuplicateGroups(tabs)) {
+    if (sameContainerPlacement(group.tabs)) {
       continue;
     }
     for (const tab of group.tabs) {

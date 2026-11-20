@@ -1,11 +1,12 @@
 import { queryFocusedWindowId, queryOpenTabs } from "./browser/tabs.js";
 import { queryGroupInfos, tabGroupsSupported } from "./browser/tabGroups.js";
+import { containersSupported, queryContainerInfos } from "./browser/containers.js";
 import { loadUiPrefs, saveUiPrefs } from "./browser/storage.js";
 import { renderTree, notifyTabsChanged } from "./dom/render.js";
 import { showReapToast, undoLastReap } from "./dom/reapUndo.js";
 import { requireElement } from "./dom/query.js";
-import { buildGroupModel, buildTabModel, describeEmptyState } from "./model/index.js";
-import type { GroupInfo, SortMode } from "./model/index.js";
+import { buildContainerModel, buildGroupModel, buildTabModel, describeEmptyState } from "./model/index.js";
+import type { ContainerInfo, GroupInfo, SortMode } from "./model/index.js";
 import { debounce } from "./utils/debounce.js";
 import { applyThemeFromBrowser } from "./theme/applyTheme.js";
 
@@ -36,6 +37,9 @@ async function refresh(): Promise<void> {
   const groupLabels: Map<number, GroupInfo> = groupsSupported
     ? await queryGroupInfos()
     : new Map();
+  const containerLabels: Map<string, ContainerInfo> = containersSupported()
+    ? await queryContainerInfos()
+    : new Map();
   const groupSizes = new Map<number, number>();
   for (const tab of tabs) {
     if (typeof tab.groupId === "number") {
@@ -45,12 +49,18 @@ async function refresh(): Promise<void> {
 
   const modelOptions = { excludePinned, filter };
   const groupView = sortMode === "group" && groupsSupported;
+  const containerView = sortMode === "container" && containersSupported();
   const model = groupView
     ? buildGroupModel(tabs, groupLabels, modelOptions)
-    : buildTabModel(tabs, modelOptions);
+    : containerView
+      ? buildContainerModel(tabs, containerLabels, modelOptions)
+      : buildTabModel(tabs, modelOptions);
+  const universeOptions = { excludePinned: false, filter: "" };
   const universeRoot = groupView
-    ? buildGroupModel(tabs, groupLabels, { excludePinned: false, filter: "" })
-    : buildTabModel(tabs, { excludePinned: false, filter: "" });
+    ? buildGroupModel(tabs, groupLabels, universeOptions)
+    : containerView
+      ? buildContainerModel(tabs, containerLabels, universeOptions)
+      : buildTabModel(tabs, universeOptions);
 
   let emptyState = model.count === 0 ? describeEmptyState(tabs, { excludePinned }) : null;
   let otherWindowsCount: number | undefined;
@@ -80,6 +90,7 @@ async function refresh(): Promise<void> {
     now: Date.now(),
     groupLabels,
     groupSizes,
+    containerLabels,
     scope: allWindows ? "all" : "window",
     otherWindowsCount,
   });
@@ -94,7 +105,9 @@ function readUiState(): [boolean, string, SortMode, boolean] {
 }
 
 function coerceSortMode(value: string): SortMode {
-  return value === "alpha" || value === "stale" || value === "group" ? value : "count";
+  return value === "alpha" || value === "stale" || value === "group" || value === "container"
+    ? value
+    : "count";
 }
 
 const SEARCH_DEBOUNCE_MS = 140;
@@ -205,6 +218,22 @@ function addGroupSortOption(): void {
   sortSelect.append(option);
 }
 
+/** Adds "Sort: By container" when custom containers are defined (FF 53+ API). */
+async function addContainerSortOption(): Promise<void> {
+  if (!containersSupported()) {
+    return;
+  }
+  const labels = await queryContainerInfos();
+  if (labels.size === 0) {
+    return;
+  }
+  const sortSelect = requireElement<HTMLSelectElement>("#sort");
+  const option = document.createElement("option");
+  option.value = "container";
+  option.textContent = "Sort: By container";
+  sortSelect.append(option);
+}
+
 /**
  * A sweep reaped earlier this session (popup closed before the toast lapsed) still
  * deserves its Undo: resurrect the toast on open (review F1).
@@ -220,6 +249,7 @@ async function restoreUndoToast(): Promise<void> {
 async function init(): Promise<void> {
   await applyThemeFromBrowser();
   addGroupSortOption();
+  await addContainerSortOption();
   await restoreUiPrefs();
   wireInteractionHandlers();
   wireTabChangeListeners();

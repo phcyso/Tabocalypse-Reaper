@@ -1,8 +1,8 @@
 import { activateTab, closeTab, closeTabs } from "../browser/tabs.js";
 import type { ReapedTab } from "../browser/storage.js";
 import { AUTO_COLLAPSE_HOST_COUNT, CONFIRM_THRESHOLD, STALE_MS } from "../shared/constants.js";
-import { bulkReapIds, closableDuplicateIds, crossGroupDuplicateIds, duplicateGroupSizes } from "../model/index.js";
-import type { ClusterNode, ClusterTab, EmptyStateReason, GroupInfo, HostNode, RootNode, SortMode } from "../model/index.js";
+import { bulkReapIds, closableDuplicateIds, crossContainerDuplicateIds, crossGroupDuplicateIds, duplicateGroupSizes } from "../model/index.js";
+import type { ClusterNode, ClusterTab, ContainerInfo, EmptyStateReason, GroupInfo, HostNode, RootNode, SortMode } from "../model/index.js";
 import { recordReap, undoLastReap } from "./reapUndo.js";
 import { requireDescendant, requireElement } from "./query.js";
 import { avatarHue, avatarLetter } from "../utils/avatar.js";
@@ -49,6 +49,8 @@ export interface RenderContext {
   now?: number;
   /** Firefox tab groups (FF 138+), keyed by groupId — powers group chips. */
   groupLabels?: Map<number, GroupInfo>;
+  /** Containers (contextual identities), keyed by cookieStoreId. */
+  containerLabels?: Map<string, ContainerInfo>;
   /** Total open tabs per groupId (unfiltered universe) — drives the
    * "last tab of group" warning in the confirm modal. */
   groupSizes?: Map<number, number>;
@@ -67,6 +69,8 @@ interface TreeDecor {
   windowLabels: Map<number, string>;
   /** Firefox tab groups (FF 138+), keyed by groupId — empty when unsupported. */
   groupLabels: Map<number, GroupInfo>;
+  /** Containers keyed by cookieStoreId — empty when the user has none defined. */
+  containerLabels: Map<string, ContainerInfo>;
 }
 
 /** Per-host precomputation: flat tab list, lookup by id, duplicate badges. */
@@ -76,6 +80,8 @@ interface HostKit {
   dupSizes: Map<number, number>;
   /** Duplicate copies that live in a different tab group: informational only. */
   crossGroupDupIds: Set<number>;
+  /** Duplicate copies that live in a different container: informational only. */
+  crossContainerDupIds: Set<number>;
   closableDups: number[];
 }
 
@@ -113,6 +119,7 @@ export function renderTree(root: RootNode, context: RenderContext): void {
     multiWindow: context.multiWindow ?? windowLabels.size > 1,
     windowLabels,
     groupLabels: context.groupLabels ?? new Map(),
+    containerLabels: context.containerLabels ?? new Map(),
   };
 
   const tree = requireElement<HTMLElement>("#tree");
@@ -178,6 +185,16 @@ function decorateHost(
   const kit = buildHostKit(host);
 
   hostCard.dataset.hostKey = hostKey;
+  // Container view: tint the header with the container's color so the card
+  // carries the container's identity, not just its name.
+  if (hostKey.startsWith("container:") && context.containerLabels) {
+    const info = context.containerLabels.get(hostKey.slice("container:".length));
+    if (info?.color) {
+      header.style.background = `color-mix(in srgb, ${info.color} 20%, var(--card))`;
+      hostCard.style.setProperty("--container-color", info.color);
+      hostCard.style.borderLeft = `3px solid ${info.color}`;
+    }
+  }
   name.textContent = host.name;
   name.title = host.name;
   badge.textContent = String(host.count);
@@ -409,6 +426,7 @@ function decorateSolo(
   const closeButton = requireDescendant<HTMLButtonElement>(fragment, ".x");
   // Optional decoration: older fixtures may not carry a groupChip span.
   const groupChip = fragment.querySelector<HTMLElement>(".groupChip");
+  const containerChip = fragment.querySelector<HTMLElement>(".containerChip");
 
   const tab = firstHostTab(host);
   if (!tab) {
@@ -433,6 +451,7 @@ function decorateSolo(
   applyAgeChip(ageChip, tab, decor);
   applyRowWindowChip(winChip, tab, decor);
   applyGroupChip(groupChip, tab.groupId, decor);
+  applyContainerChip(containerChip, tab.cookieStoreId, decor);
 
   guardCloseButton(closeButton, async () => {
     // Optimistic close, same rationale as the per-tab ✕ above: the whole host
@@ -649,6 +668,7 @@ function decorateTab(
   const dupChip = requireDescendant<HTMLElement>(fragment, ".dupChip");
   // Optional decoration: older fixtures may not carry a groupChip span.
   const groupChip = fragment.querySelector<HTMLElement>(".groupChip");
+  const containerChip = fragment.querySelector<HTMLElement>(".containerChip");
 
   anchor.textContent = tab.title;
   anchor.href = tab.url;
@@ -670,6 +690,12 @@ function decorateTab(
     dupChip.textContent = `∑${dupSize}`;
     dupChip.title = "Copies of this page are open in different tab groups — kept intentionally";
     dupChip.classList.add("crossGroupDup");
+  } else if (dupSize && dupSize > 1 && kit.crossContainerDupIds.has(tab.id)) {
+    // Same page deliberately open in another container: inform, never suggest.
+    dupChip.hidden = false;
+    dupChip.textContent = `∑${dupSize}`;
+    dupChip.title = "Copies of this page are open in different containers — kept intentionally";
+    dupChip.classList.add("crossGroupDup");
   } else if (dupSize && dupSize > 1) {
     dupChip.hidden = false;
     dupChip.textContent = `×${dupSize}`;
@@ -678,6 +704,8 @@ function decorateTab(
   }
 
   applyGroupChip(groupChip, tab.groupId, decor);
+  applyContainerChip(containerChip, tab.cookieStoreId, decor);
+  applyContainerChip(containerChip, tab.cookieStoreId, decor);
 
   guardCloseButton(closeButton, async () => {
     // Optimistic close (user feedback 2026-11: the API roundtrip + full refresh
@@ -1041,6 +1069,27 @@ function applyGroupChip(
   chip.style.setProperty("--group-color", groupColorHex(info.color));
 }
 
+/** Container chip (colored dot + name); mirrors the group chip. */
+function applyContainerChip(
+  chip: HTMLElement | null,
+  cookieStoreId: string | null | undefined,
+  decor: TreeDecor
+): void {
+  if (!chip) {
+    return;
+  }
+  const info = cookieStoreId ? decor.containerLabels.get(cookieStoreId) : undefined;
+  if (!info) {
+    chip.hidden = true;
+    chip.textContent = "";
+    return;
+  }
+  chip.hidden = false;
+  chip.textContent = info.name;
+  chip.title = `In container ${info.name}`;
+  chip.style.setProperty("--container-color", info.color ?? "var(--accent)");
+}
+
 /** Favicon with themed letter-avatar fallback: tinted tile in a deterministic hue
  * derived from the hostname (review A3) — no more glaring white squares in dark
  * themes. Pure hue/letter helpers live in utils/avatar.ts. */
@@ -1126,6 +1175,7 @@ function buildHostKit(host: HostNode): HostKit {
     tabsById,
     dupSizes: duplicateGroupSizes(tabs),
     crossGroupDupIds: new Set(crossGroupDuplicateIds(tabs)),
+    crossContainerDupIds: new Set(crossContainerDuplicateIds(tabs)),
     closableDups: closableDuplicateIds(tabs),
   };
 }
@@ -1142,6 +1192,7 @@ function toSweepTabs(ids: readonly number[], kit: HostKit): ReapedTab[] {
         pinned: tab.pinned,
         windowId: tab.windowId,
         groupId: tab.groupId,
+        cookieStoreId: tab.cookieStoreId,
       });
     }
   }

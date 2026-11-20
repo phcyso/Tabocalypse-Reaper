@@ -4,7 +4,7 @@ export enum NodeKind {
   Cluster = "cluster",
 }
 
-export type SortMode = "alpha" | "count" | "stale" | "group";
+export type SortMode = "alpha" | "count" | "stale" | "group" | "container";
 
 /** A Firefox tab group, resolved via the tabGroups API (FF 138+). */
 export interface GroupInfo {
@@ -12,6 +12,14 @@ export interface GroupInfo {
   /** May be empty — Firefox allows unnamed groups. */
   name: string;
   /** tabGroups.Color: "blue" | "cyan" | "green" | "purple" | "red" | "yellow" | "orange" | "pink" | null. */
+  color: string | null;
+}
+
+/** A Firefox container (contextual identity), via the contextualIdentities API. */
+export interface ContainerInfo {
+  cookieStoreId: string;
+  name: string;
+  /** Hex color code (e.g. "#37adff"); null when the API only returns a color name. */
   color: string | null;
 }
 
@@ -29,6 +37,8 @@ export interface TabSummary {
   /** Firefox tab-group id (tabGroups API, FF 138+); null/undefined when ungrouped
    * or when the runtime lacks the API. NEVER persisted — groupIds change on restore. */
   groupId?: number | null;
+  /** Container (contextual identity) cookie store id; "firefox-default" when none. */
+  cookieStoreId?: string;
 }
 
 export interface ClusterTab {
@@ -42,6 +52,7 @@ export interface ClusterTab {
   lastAccessed: number;
   active: boolean;
   groupId: number | null;
+  cookieStoreId: string;
 }
 
 export interface BuildOptions {

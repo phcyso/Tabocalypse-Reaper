@@ -140,6 +140,8 @@ body{ font: 12px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubun
 /* Firefox tab-group chip: colored dot via --group-color (tabGroups.Color). */
 .groupChip{ font-size:10px; line-height:16px; padding:0 6px 0 4px; border-radius:999px; white-space:nowrap; flex-shrink:0; max-width:110px; overflow:hidden; text-overflow:ellipsis; color:var(--text); border:1px solid color-mix(in srgb, var(--group-color, var(--accent)) 55%, var(--line)); background:color-mix(in srgb, var(--group-color, var(--accent)) 12%, var(--card)); }
 .groupChip::before{ content:""; display:inline-block; width:8px; height:8px; border-radius:999px; background:var(--group-color, var(--accent)); margin-right:4px; vertical-align:-1px; }
+.containerChip{ font-size:10px; line-height:16px; padding:0 6px 0 4px; border-radius:999px; white-space:nowrap; flex-shrink:0; max-width:110px; overflow:hidden; text-overflow:ellipsis; color:var(--text); border:1px solid color-mix(in srgb, var(--container-color, var(--accent)) 55%, var(--line)); background:color-mix(in srgb, var(--container-color, var(--accent)) 12%, var(--card)); }
+.containerChip::before{ content:""; display:inline-block; width:8px; height:8px; border-radius:999px; background:var(--container-color, var(--accent)); margin-right:4px; vertical-align:-1px; }
 .ageChip, .winChip, .dupChip{ font-size:10px; line-height:16px; padding:0 6px; border-radius:999px; white-space:nowrap; flex-shrink:0; }
 .ageChip{ color:var(--muted); border:1px solid var(--line); }
 .winChip{ color:var(--accent); border:1px solid color-mix(in srgb, var(--accent) 45%, transparent); background:color-mix(in srgb, var(--accent) 10%, var(--card)); font-weight:600; }

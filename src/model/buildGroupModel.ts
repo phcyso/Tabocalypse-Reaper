@@ -60,6 +60,7 @@ export function buildGroupModel(
       lastAccessed: tab.lastAccessed ?? now,
       active: tab.active ?? false,
       groupId: grouped ? tab.groupId! : null,
+      cookieStoreId: tab.cookieStoreId || "firefox-default",
     });
 
     clusterNode.ids.add(tab.id);

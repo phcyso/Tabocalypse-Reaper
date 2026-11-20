@@ -11,6 +11,13 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); dates ar
   window it was opened from, matching common expectations; the toggle
   restores the legacy cross-window view (W2/⧉N chips only render there). A
   scoped-and-empty popup now explains how many tabs live in other windows.
+- **Firefox container support** (contextual identities, `contextualIdentities`
+  permission — silent): rows carry colored container-name chips (default
+  container never shows one); a "Sort: By container" view groups tabs by
+  container (default-container tabs under "(no container)"); container cards
+  carry the container's color; duplicate copies in *different* containers are
+  protected from "Close duplicates" and flagged informationally; Undo reopens
+  closed tabs back into their container.
 - **Firefox tab-group support** (tabGroups API, FF 138+, silently
   feature-detected on the 115 floor): rows carry colored group-name chips;
   a new "Sort: By tab group" view groups tabs by their Firefox tab group
