@@ -3,6 +3,8 @@ import type { SortMode } from "../model/index.js";
 export interface UiPrefs {
   sort: SortMode;
   excludePinned: boolean;
+  /** False (default): the popup scopes to its own window; true: every window. */
+  allWindows?: boolean;
 }
 
 /** One reaped tab as stored for undo (review F1). */
@@ -11,6 +13,8 @@ export interface ReapedTab {
   title: string;
   pinned: boolean;
   windowId: number;
+  /** Firefox tab-group id at reap time; best-effort regrouping on Undo. */
+  groupId?: number | null;
 }
 
 /** The last bulk reap, kept in session storage so Undo survives popup round-trips. */
@@ -59,10 +63,13 @@ function isUiPrefs(value: unknown): value is Partial<UiPrefs> {
     candidate.sort === undefined ||
     candidate.sort === "alpha" ||
     candidate.sort === "count" ||
-    candidate.sort === "stale";
+    candidate.sort === "stale" ||
+    candidate.sort === "group";
   const pinnedOk =
     candidate.excludePinned === undefined || typeof candidate.excludePinned === "boolean";
-  return sortOk && pinnedOk;
+  const windowsOk =
+    candidate.allWindows === undefined || typeof candidate.allWindows === "boolean";
+  return sortOk && pinnedOk && windowsOk;
 }
 
 function isReapedTab(value: unknown): value is ReapedTab {

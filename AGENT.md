@@ -30,6 +30,8 @@ Host count = unique tab IDs across its clusters. Cluster count = `tabs.length`.
 - Use `<template>` cloning; avoid `innerHTML` mass string ops.
 - Shallow hierarchy (Host → Cluster only) to keep DOM light.
 - Bulk close via `browser.tabs.remove([...ids])`. Confirm if ≥10 (`CONFIRM_THRESHOLD`) using the in-popup themed modal (`showConfirmDialog` in `dom/render.ts`) — NOT native `confirm()`; it previews the affected tab titles. Single-tab ✕ closes **optimistically** (row removed instantly, `onRefresh` resyncs on API failure). Scroll bottom fade is the static `.treeFade` overlay — never put `mask-image` on the scrolling `.tree` (ghost-arc artifact).
+- **Window scoping**: the popup acts on the window it was opened from by default (`queryOpenTabs({ windowId })`); the "All windows" toolbar checkbox (`allWindows` uiPref) restores the cross-window view. W2/⧉N chips only render in all-windows mode.
+- **Tab groups** (FF 138+, feature-detect via `browser/tabGroups.ts` — `tabGroupsSupported()`): `groupId` rides on TabSummary/ClusterTab and must never be persisted (groupIds change on session restore). Cross-group duplicates are protected from Close-dups (`closableDuplicateIds` skips mixed-group placements; `crossGroupDuplicateIds` drives the informational chip). Group view = `buildGroupModel` (Sort: By tab group; `(no group)` pseudo-host). Confirm modal warns when a reap closes a group's last tab (`groupRemovalWarnings`); Undo regroups best-effort (`restoreTabGroups`).
 - Sort hosts/clusters by count (default) or alpha; tabs inside cluster sorted by title.
 
 ## Icon Logic

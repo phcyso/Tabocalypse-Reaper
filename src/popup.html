@@ -24,6 +24,7 @@
   <section class="toolbar">
     <input id="search" type="search" placeholder="Filter host/path/title ( / to focus )" aria-label="Filter">
     <label class="opt"><input type="checkbox" id="excludePinned" checked> Exclude pinned</label>
+    <label class="opt"><input type="checkbox" id="allWindows" title="Include tabs from every Firefox window"> All windows</label>
     <button id="refresh" title="Reload open tabs">Refresh</button>
     <button id="refreshHint" class="refreshHint" hidden title="Tabs changed — the visible order may be outdated">Sort outdated — Refresh</button>
   </section>
@@ -82,6 +83,7 @@
       <span class="ageChip" hidden></span>
       <span class="winChip" hidden></span>
       <span class="dupChip" hidden></span>
+      <span class="groupChip" hidden></span>
       <button class="x" title="Close tab">✕</button>
     </div>
   </template>
@@ -95,6 +97,7 @@
       <span class="path small"></span>
       <span class="ageChip" hidden></span>
       <span class="winChip" hidden></span>
+      <span class="groupChip" hidden></span>
       <button class="x" title="Close tab">✕</button>
     </div>
   </template>

@@ -1,10 +1,11 @@
 import { queryFocusedWindowId, queryOpenTabs } from "./browser/tabs.js";
+import { queryGroupInfos, tabGroupsSupported } from "./browser/tabGroups.js";
 import { loadUiPrefs, saveUiPrefs } from "./browser/storage.js";
 import { renderTree, notifyTabsChanged } from "./dom/render.js";
 import { showReapToast, undoLastReap } from "./dom/reapUndo.js";
 import { requireElement } from "./dom/query.js";
-import { buildTabModel, describeEmptyState } from "./model/index.js";
-import type { SortMode } from "./model/index.js";
+import { buildGroupModel, buildTabModel, describeEmptyState } from "./model/index.js";
+import type { GroupInfo, SortMode } from "./model/index.js";
 import { debounce } from "./utils/debounce.js";
 import { applyThemeFromBrowser } from "./theme/applyTheme.js";
 
@@ -15,38 +16,85 @@ import { applyThemeFromBrowser } from "./theme/applyTheme.js";
  */
 let refreshToken = 0;
 
+/** Firefox 138+: tab groups API available (feature-detected once). */
+const groupsSupported = tabGroupsSupported();
+
 async function refresh(): Promise<void> {
   const token = ++refreshToken;
-  const [excludePinned, filter, sortMode] = readUiState();
-  const [tabs, focusedWindowId] = await Promise.all([queryOpenTabs(), queryFocusedWindowId()]);
+  const [excludePinned, filter, sortMode, allWindows] = readUiState();
+  const focusedWindowId = await queryFocusedWindowId();
   if (token !== refreshToken) {
     return;
   }
-  const model = buildTabModel(tabs, { excludePinned, filter });
-  const universeRoot = buildTabModel(tabs, { excludePinned: false });
+  // Default UX scopes the popup to the window it was opened from (user
+  // feedback 2026-11); "All windows" restores the legacy cross-window view.
+  const tabs = await queryOpenTabs(allWindows ? undefined : { windowId: focusedWindowId });
+  if (token !== refreshToken) {
+    return;
+  }
+
+  const groupLabels: Map<number, GroupInfo> = groupsSupported
+    ? await queryGroupInfos()
+    : new Map();
+  const groupSizes = new Map<number, number>();
+  for (const tab of tabs) {
+    if (typeof tab.groupId === "number") {
+      groupSizes.set(tab.groupId, (groupSizes.get(tab.groupId) ?? 0) + 1);
+    }
+  }
+
+  const modelOptions = { excludePinned, filter };
+  const groupView = sortMode === "group" && groupsSupported;
+  const model = groupView
+    ? buildGroupModel(tabs, groupLabels, modelOptions)
+    : buildTabModel(tabs, modelOptions);
+  const universeRoot = groupView
+    ? buildGroupModel(tabs, groupLabels, { excludePinned: false, filter: "" })
+    : buildTabModel(tabs, { excludePinned: false, filter: "" });
+
+  let emptyState = model.count === 0 ? describeEmptyState(tabs, { excludePinned }) : null;
+  let otherWindowsCount: number | undefined;
+  if (!allWindows && model.count === 0 && emptyState === "no-tabs") {
+    // Scoped and empty: tell the user how much lives in other windows instead
+    // of a bare "all clear".
+    const everyTab = await queryOpenTabs();
+    if (token !== refreshToken) {
+      return;
+    }
+    otherWindowsCount = Math.max(0, everyTab.length - tabs.length);
+    if (otherWindowsCount > 0) {
+      emptyState = "empty-window";
+    }
+  }
+
   const windowIds = new Set(tabs.map((tab) => tab.windowId));
   renderTree(model, {
     sortMode,
     onRefresh: refresh,
-    emptyState:
-      model.count === 0 ? describeEmptyState(tabs, { excludePinned }) : null,
+    emptyState,
     filter,
     universeRoot,
     focusedWindowId,
-    multiWindow: windowIds.size > 1,
+    // Cross-window chips only make sense in the all-windows view.
+    multiWindow: allWindows && windowIds.size > 1,
     now: Date.now(),
+    groupLabels,
+    groupSizes,
+    scope: allWindows ? "all" : "window",
+    otherWindowsCount,
   });
 }
 
-function readUiState(): [boolean, string, SortMode] {
+function readUiState(): [boolean, string, SortMode, boolean] {
   const excludePinned = requireElement<HTMLInputElement>("#excludePinned").checked;
   const filter = requireElement<HTMLInputElement>("#search").value;
   const sortSelect = requireElement<HTMLSelectElement>("#sort");
-  return [excludePinned, filter, coerceSortMode(sortSelect.value)];
+  const allWindows = requireElement<HTMLInputElement>("#allWindows").checked;
+  return [excludePinned, filter, coerceSortMode(sortSelect.value), allWindows];
 }
 
 function coerceSortMode(value: string): SortMode {
-  return value === "alpha" || value === "stale" ? value : "count";
+  return value === "alpha" || value === "stale" || value === "group" ? value : "count";
 }
 
 const SEARCH_DEBOUNCE_MS = 140;
@@ -70,6 +118,11 @@ function wireInteractionHandlers(): void {
   });
 
   requireElement<HTMLInputElement>("#excludePinned").addEventListener("change", () => {
+    persistUiPrefs();
+    void refresh();
+  });
+
+  requireElement<HTMLInputElement>("#allWindows").addEventListener("change", () => {
     persistUiPrefs();
     void refresh();
   });
@@ -118,7 +171,8 @@ function wireTabChangeListeners(): void {
 function persistUiPrefs(): void {
   const sortSelect = requireElement<HTMLSelectElement>("#sort");
   const excludePinned = requireElement<HTMLInputElement>("#excludePinned").checked;
-  void saveUiPrefs({ sort: coerceSortMode(sortSelect.value), excludePinned });
+  const allWindows = requireElement<HTMLInputElement>("#allWindows").checked;
+  void saveUiPrefs({ sort: coerceSortMode(sortSelect.value), excludePinned, allWindows });
 }
 
 /** Applies stored UI choices before the first refresh so the popup opens as left. */
@@ -130,6 +184,25 @@ async function restoreUiPrefs(): Promise<void> {
   if (typeof prefs.excludePinned === "boolean") {
     requireElement<HTMLInputElement>("#excludePinned").checked = prefs.excludePinned;
   }
+  if (typeof prefs.allWindows === "boolean") {
+    requireElement<HTMLInputElement>("#allWindows").checked = prefs.allWindows;
+  }
+}
+
+/**
+ * Adds the "Sort: By tab group" option when this Firefox supports the
+ * tabGroups API (138+). Must run BEFORE restoreUiPrefs so a saved "group"
+ * sort can apply.
+ */
+function addGroupSortOption(): void {
+  if (!tabGroupsSupported()) {
+    return;
+  }
+  const sortSelect = requireElement<HTMLSelectElement>("#sort");
+  const option = document.createElement("option");
+  option.value = "group";
+  option.textContent = "Sort: By tab group";
+  sortSelect.append(option);
 }
 
 /**
@@ -146,6 +219,7 @@ async function restoreUndoToast(): Promise<void> {
 
 async function init(): Promise<void> {
   await applyThemeFromBrowser();
+  addGroupSortOption();
   await restoreUiPrefs();
   wireInteractionHandlers();
   wireTabChangeListeners();

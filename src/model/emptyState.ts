@@ -5,7 +5,11 @@ import type { BuildOptions, TabSummary } from "./types.js";
  * Why the tree is empty. Rendered as a friendly message instead of a blank void
  * (audit finding F-7).
  */
-export type EmptyStateReason = "no-tabs" | "pinned-hidden" | "no-filter-hits";
+export type EmptyStateReason =
+  | "no-tabs"
+  | "pinned-hidden"
+  | "no-filter-hits"
+  | "empty-window";
 
 /**
  * Classifies an empty render so the UI can explain which control is hiding the tabs:

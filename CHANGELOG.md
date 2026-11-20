@@ -6,6 +6,21 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); dates ar
 ## [Unreleased]
 
 ### Added
+- **Window-scoped by default** with an "All windows" toolbar toggle
+  (session-persisted): the popup now counts and reaps only the tabs of the
+  window it was opened from, matching common expectations; the toggle
+  restores the legacy cross-window view (W2/⧉N chips only render there). A
+  scoped-and-empty popup now explains how many tabs live in other windows.
+- **Firefox tab-group support** (tabGroups API, FF 138+, silently
+  feature-detected on the 115 floor): rows carry colored group-name chips;
+  a new "Sort: By tab group" view groups tabs by their Firefox tab group
+  (ungrouped tabs collect under "(no group)"); duplicate copies that live in
+  *different* groups are protected from "Close duplicates" (cross-group
+  duplicates are intentional organization) and get an informational chip; the
+  confirm modal warns when a reap would close a tab group's last member
+  (Firefox deletes the group); Undo puts reopened tabs back into their groups
+  when those groups still exist. Group ids are never persisted — Firefox
+  reassigns them on session restore.
 - **Themed in-popup confirm modal** for every bulk reap (host / cluster / stale /
   duplicates) once the ≥10 `CONFIRM_THRESHOLD` is exceeded: shows the exact scope
   ("Reap N tabs under *host*?"), a pinned-survive note when relevant, and a

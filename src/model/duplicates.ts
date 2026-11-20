@@ -7,6 +7,8 @@ export interface DuplicateCandidate {
   pinned: boolean;
   lastAccessed: number;
   active: boolean;
+  /** Firefox tab-group id; null when ungrouped or runtime lacks the API. */
+  groupId?: number | null;
 }
 
 export interface DuplicateGroup {
@@ -51,13 +53,30 @@ export function pickDuplicateKeeper(tabs: readonly DuplicateCandidate[]): Duplic
 }
 
 /**
+ * True when every copy of a duplicate group shares one tab-group id (all null
+ * = all ungrouped, which counts as "same place"). Copies spread across
+ * DIFFERENT groups are intentional organization — never auto-suggest closing
+ * them (user feedback 2026-11: the same page may deliberately be open in
+ * multiple tab groups).
+ */
+function sameGroupPlacement(tabs: readonly DuplicateCandidate[]): boolean {
+  const first = tabs[0]?.groupId ?? null;
+  return tabs.every((tab) => (tab.groupId ?? null) === (first ?? null));
+}
+
+/**
  * IDs of duplicate tabs a "Close duplicates" action may close: every non-keeper
  * copy that is not pinned (pinned tabs are deliberately-kept state and survive
- * bulk actions, exactly like host/cluster Reap — audit finding F-5).
+ * bulk actions, exactly like host/cluster Reap — audit finding F-5) and that
+ * does NOT live in a different tab group than the keeper (cross-group copies
+ * are protected — see sameGroupPlacement).
  */
 export function closableDuplicateIds(tabs: readonly DuplicateCandidate[]): number[] {
   const closable: number[] = [];
   for (const group of findDuplicateGroups(tabs)) {
+    if (!sameGroupPlacement(group.tabs)) {
+      continue;
+    }
     const keeper = pickDuplicateKeeper(group.tabs);
     for (const tab of group.tabs) {
       if (tab.id !== keeper.id && !tab.pinned) {
@@ -70,7 +89,9 @@ export function closableDuplicateIds(tabs: readonly DuplicateCandidate[]): numbe
 
 /**
  * Group size per tab ID (e.g. 3 for "×3" row chips); tabs in no duplicate group
- * are absent from the map.
+ * are absent from the map. Cross-group duplicates are INCLUDED here (the chip
+ * is informational for them — see crossGroupDuplicateIds for the destructive
+ * set, which excludes them).
  */
 export function duplicateGroupSizes(tabs: readonly DuplicateCandidate[]): Map<number, number> {
   const sizes = new Map<number, number>();
@@ -80,4 +101,22 @@ export function duplicateGroupSizes(tabs: readonly DuplicateCandidate[]): Map<nu
     }
   }
   return sizes;
+}
+
+/**
+ * Tab IDs whose duplicate copies live in a DIFFERENT tab group than the keeper
+ * (or spread across several groups): informationally flagged but never
+ * auto-closable — the copies are deliberate state (user feedback 2026-11).
+ */
+export function crossGroupDuplicateIds(tabs: readonly DuplicateCandidate[]): number[] {
+  const ids: number[] = [];
+  for (const group of findDuplicateGroups(tabs)) {
+    if (sameGroupPlacement(group.tabs)) {
+      continue;
+    }
+    for (const tab of group.tabs) {
+      ids.push(tab.id);
+    }
+  }
+  return ids;
 }

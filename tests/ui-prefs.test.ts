@@ -39,6 +39,31 @@ describe("UI prefs persistence (audit F-11)", () => {
     expect(await loadUiPrefs()).toEqual({ sort: "alpha", excludePinned: false });
   });
 
+  it("persists the all-windows scope toggle", async () => {
+    const data = stubSessionStorage();
+    const { loadUiPrefs, saveUiPrefs } = await import("../src/browser/storage.js");
+
+    await saveUiPrefs({ sort: "count", excludePinned: true, allWindows: true });
+
+    expect(await loadUiPrefs()).toEqual({
+      sort: "count",
+      excludePinned: true,
+      allWindows: true,
+    });
+    expect(data.has("uiPrefs")).toBe(true);
+  });
+
+  it("accepts the group sort mode and drops invalid shapes", async () => {
+    stubSessionStorage();
+    const { loadUiPrefs, saveUiPrefs } = await import("../src/browser/storage.js");
+
+    await saveUiPrefs({ sort: "group", excludePinned: true, allWindows: false });
+    expect(await loadUiPrefs()).toEqual({ sort: "group", excludePinned: true, allWindows: false });
+
+    await browser.storage.session.set({ uiPrefs: { sort: 42, allWindows: "yes" } });
+    expect(await loadUiPrefs()).toEqual({});
+  });
+
   it("round-trips the stale sort mode (review F3)", async () => {
     stubSessionStorage();
     const { loadUiPrefs, saveUiPrefs } = await import("../src/browser/storage.js");

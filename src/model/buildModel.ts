@@ -46,6 +46,7 @@ export function buildTabModel(
       // Missing lastAccessed (stubs/fixtures) reads as "accessed now", never stale.
       lastAccessed: tab.lastAccessed ?? now,
       active: tab.active ?? false,
+      groupId: tab.groupId ?? null,
     });
 
     clusterNode.ids.add(tab.id);

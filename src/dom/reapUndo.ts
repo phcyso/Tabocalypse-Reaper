@@ -1,4 +1,5 @@
 import { reopenTab } from "../browser/tabs.js";
+import { restoreTabGroups } from "../browser/tabGroups.js";
 import { clearLastSweep, loadLastSweep, saveLastSweep, type ReapedTab } from "../browser/storage.js";
 import { UNDO_TOAST_MS } from "../shared/constants.js";
 import { requireElement } from "./query.js";
@@ -63,8 +64,22 @@ export async function undoLastReap(onRefresh?: () => Promise<void> | void): Prom
     hideReapToast();
     return;
   }
+  // Best-effort regrouping (tabGroups API, FF 138+): puts reopened tabs back
+  // into their groups when those groups still exist. Swallowed failures leave
+  // tabs ungrouped — groupIds may have been reassigned by session restore.
+  const regroups = new Map<number, number[]>();
   for (const tab of sweep.tabs) {
-    await reopenTab(tab);
+    const newId = await reopenTab(tab);
+    if (typeof tab.groupId === "number" && newId != null) {
+      const ids = regroups.get(tab.groupId) ?? [];
+      ids.push(newId);
+      regroups.set(tab.groupId, ids);
+    }
+  }
+  if (regroups.size > 0) {
+    await restoreTabGroups(
+      [...regroups.entries()].map(([groupId, tabIds]) => ({ groupId, tabIds }))
+    );
   }
   await clearLastSweep();
   hideReapToast();

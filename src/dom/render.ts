@@ -1,8 +1,8 @@
 import { activateTab, closeTab, closeTabs } from "../browser/tabs.js";
 import type { ReapedTab } from "../browser/storage.js";
 import { AUTO_COLLAPSE_HOST_COUNT, CONFIRM_THRESHOLD, STALE_MS } from "../shared/constants.js";
-import { bulkReapIds, closableDuplicateIds, duplicateGroupSizes } from "../model/index.js";
-import type { ClusterNode, ClusterTab, EmptyStateReason, HostNode, RootNode, SortMode } from "../model/index.js";
+import { bulkReapIds, closableDuplicateIds, crossGroupDuplicateIds, duplicateGroupSizes } from "../model/index.js";
+import type { ClusterNode, ClusterTab, EmptyStateReason, GroupInfo, HostNode, RootNode, SortMode } from "../model/index.js";
 import { recordReap, undoLastReap } from "./reapUndo.js";
 import { requireDescendant, requireElement } from "./query.js";
 import { avatarHue, avatarLetter } from "../utils/avatar.js";
@@ -47,6 +47,15 @@ export interface RenderContext {
   multiWindow?: boolean;
   /** Reference time for age chips/staleness (review F3); defaults to Date.now(). */
   now?: number;
+  /** Firefox tab groups (FF 138+), keyed by groupId — powers group chips. */
+  groupLabels?: Map<number, GroupInfo>;
+  /** Total open tabs per groupId (unfiltered universe) — drives the
+   * "last tab of group" warning in the confirm modal. */
+  groupSizes?: Map<number, number>;
+  /** "window" (default) or "all" — affects stats + empty-state copy. */
+  scope?: "window" | "all";
+  /** Tabs open in OTHER windows (empty-window state hint); scoped runs only. */
+  otherWindowsCount?: number;
 }
 
 /** Per-render decorations shared by every level of the tree. */
@@ -56,6 +65,8 @@ interface TreeDecor {
   multiWindow: boolean;
   /** Stable W1/W2… labels per windowId, ordered by id. */
   windowLabels: Map<number, string>;
+  /** Firefox tab groups (FF 138+), keyed by groupId — empty when unsupported. */
+  groupLabels: Map<number, GroupInfo>;
 }
 
 /** Per-host precomputation: flat tab list, lookup by id, duplicate badges. */
@@ -63,6 +74,8 @@ interface HostKit {
   tabs: ClusterTab[];
   tabsById: Map<number, ClusterTab>;
   dupSizes: Map<number, number>;
+  /** Duplicate copies that live in a different tab group: informational only. */
+  crossGroupDupIds: Set<number>;
   closableDups: number[];
 }
 
@@ -99,6 +112,7 @@ export function renderTree(root: RootNode, context: RenderContext): void {
     focusedWindowId: context.focusedWindowId ?? -1,
     multiWindow: context.multiWindow ?? windowLabels.size > 1,
     windowLabels,
+    groupLabels: context.groupLabels ?? new Map(),
   };
 
   const tree = requireElement<HTMLElement>("#tree");
@@ -108,7 +122,9 @@ export function renderTree(root: RootNode, context: RenderContext): void {
   stats.textContent = formatStats(root.count);
 
   if (root.count === 0) {
-    tree.append(buildEmptyStateNode(context.emptyState ?? "no-tabs", context.filter ?? ""));
+    tree.append(
+      buildEmptyStateNode(context.emptyState ?? "no-tabs", context.filter ?? "", context)
+    );
     return;
   }
 
@@ -209,6 +225,7 @@ function decorateHost(
           tabs: reapIds
             .map((id) => kit.tabsById.get(id))
             .filter((tab): tab is ClusterTab => Boolean(tab)),
+          warnings: groupRemovalWarnings(reapIds, kit, context),
         }))
       ) {
         closeButton.disabled = false;
@@ -390,6 +407,8 @@ function decorateSolo(
   const ageChip = requireDescendant<HTMLElement>(fragment, ".ageChip");
   const winChip = requireDescendant<HTMLElement>(fragment, ".winChip");
   const closeButton = requireDescendant<HTMLButtonElement>(fragment, ".x");
+  // Optional decoration: older fixtures may not carry a groupChip span.
+  const groupChip = fragment.querySelector<HTMLElement>(".groupChip");
 
   const tab = firstHostTab(host);
   if (!tab) {
@@ -413,6 +432,7 @@ function decorateSolo(
 
   applyAgeChip(ageChip, tab, decor);
   applyRowWindowChip(winChip, tab, decor);
+  applyGroupChip(groupChip, tab.groupId, decor);
 
   guardCloseButton(closeButton, async () => {
     // Optimistic close, same rationale as the per-tab ✕ above: the whole host
@@ -534,6 +554,7 @@ function decorateCluster(
             tabs: reapIds
               .map((id) => kit.tabsById.get(id))
               .filter((tab): tab is ClusterTab => Boolean(tab)),
+            warnings: groupRemovalWarnings(reapIds, kit, context),
           }))
         ) {
           closeButton.disabled = false;
@@ -626,6 +647,8 @@ function decorateTab(
   const ageChip = requireDescendant<HTMLElement>(fragment, ".ageChip");
   const winChip = requireDescendant<HTMLElement>(fragment, ".winChip");
   const dupChip = requireDescendant<HTMLElement>(fragment, ".dupChip");
+  // Optional decoration: older fixtures may not carry a groupChip span.
+  const groupChip = fragment.querySelector<HTMLElement>(".groupChip");
 
   anchor.textContent = tab.title;
   anchor.href = tab.url;
@@ -641,11 +664,20 @@ function decorateTab(
   applyRowWindowChip(winChip, tab, decor);
 
   const dupSize = kit.dupSizes.get(tab.id);
-  if (dupSize && dupSize > 1) {
+  if (dupSize && dupSize > 1 && kit.crossGroupDupIds.has(tab.id)) {
+    // Same page deliberately open in another tab group: inform, never suggest.
+    dupChip.hidden = false;
+    dupChip.textContent = `∑${dupSize}`;
+    dupChip.title = "Copies of this page are open in different tab groups — kept intentionally";
+    dupChip.classList.add("crossGroupDup");
+  } else if (dupSize && dupSize > 1) {
     dupChip.hidden = false;
     dupChip.textContent = `×${dupSize}`;
     dupChip.title = `${dupSize} open copies of this page`;
+    dupChip.classList.remove("crossGroupDup");
   }
+
+  applyGroupChip(groupChip, tab.groupId, decor);
 
   guardCloseButton(closeButton, async () => {
     // Optimistic close (user feedback 2026-11: the API roundtrip + full refresh
@@ -744,7 +776,11 @@ function guardCloseButton(
  * Builds the friendly message shown instead of a blank tree when nothing matches,
  * pointing at the control that hides the tabs (audit finding F-7).
  */
-function buildEmptyStateNode(reason: EmptyStateReason, filter: string): HTMLElement {
+function buildEmptyStateNode(
+  reason: EmptyStateReason,
+  filter: string,
+  context?: Pick<RenderContext, "otherWindowsCount">
+): HTMLElement {
   const empty = document.createElement("div");
   empty.className = "emptyState";
 
@@ -763,6 +799,15 @@ function buildEmptyStateNode(reason: EmptyStateReason, filter: string): HTMLElem
       headline.textContent = "No tabs match";
       hint.textContent = `Nothing matches “${filter}”. Clear the filter to see every tab.`;
       break;
+    case "empty-window": {
+      const others = context?.otherWindowsCount ?? 0;
+      headline.textContent = "Nothing in this window";
+      hint.textContent =
+        others > 0
+          ? `${others} tab${others === 1 ? "" : "s"} ${others === 1 ? "is" : "are"} open in other windows — tick “All windows” above to include them.`
+          : "There are no tabs to manage right now.";
+      break;
+    }
     default:
       headline.textContent = "All clear";
       hint.textContent = "There are no tabs to manage right now.";
@@ -959,6 +1004,43 @@ function handleTabRemoval(
   markSortStale();
 }
 
+/** Approximations of Firefox's tabGroups.Color palette for group chips. */
+const GROUP_COLORS: Record<string, string> = {
+  blue: "#31a5e7",
+  cyan: "#3bb8c9",
+  green: "#54a437",
+  purple: "#a858e0",
+  red: "#e05a68",
+  yellow: "#d9a207",
+  orange: "#ec7f2d",
+  pink: "#e56ba5",
+};
+
+function groupColorHex(color: string | null | undefined): string {
+  return GROUP_COLORS[color ?? ""] ?? "var(--accent)";
+}
+
+/** Chip naming the Firefox tab group a row belongs to (colored dot + name). */
+function applyGroupChip(
+  chip: HTMLElement | null,
+  groupId: number | null | undefined,
+  decor: TreeDecor
+): void {
+  if (!chip) {
+    return;
+  }
+  if (groupId == null || !decor.groupLabels.has(groupId)) {
+    chip.hidden = true;
+    chip.textContent = "";
+    return;
+  }
+  const info = decor.groupLabels.get(groupId)!;
+  chip.hidden = false;
+  chip.textContent = info.name || `Group ${groupId}`;
+  chip.title = `In tab group ${info.name || `#${groupId}`}`;
+  chip.style.setProperty("--group-color", groupColorHex(info.color));
+}
+
 /** Favicon with themed letter-avatar fallback: tinted tile in a deterministic hue
  * derived from the hostname (review A3) — no more glaring white squares in dark
  * themes. Pure hue/letter helpers live in utils/avatar.ts. */
@@ -1043,6 +1125,7 @@ function buildHostKit(host: HostNode): HostKit {
     tabs,
     tabsById,
     dupSizes: duplicateGroupSizes(tabs),
+    crossGroupDupIds: new Set(crossGroupDuplicateIds(tabs)),
     closableDups: closableDuplicateIds(tabs),
   };
 }
@@ -1053,7 +1136,13 @@ function toSweepTabs(ids: readonly number[], kit: HostKit): ReapedTab[] {
   for (const id of ids) {
     const tab = kit.tabsById.get(id);
     if (tab) {
-      sweep.push({ url: tab.url, title: tab.title, pinned: tab.pinned, windowId: tab.windowId });
+      sweep.push({
+        url: tab.url,
+        title: tab.title,
+        pinned: tab.pinned,
+        windowId: tab.windowId,
+        groupId: tab.groupId,
+      });
     }
   }
   return sweep;
@@ -1162,6 +1251,35 @@ function updateStatsDisplay(): void {
   stats.textContent = formatStats(root.count);
 }
 
+/** Danger notes for the confirm modal: warns when a reap would close a tab
+ * group's last member (Firefox removes the group in that case). */
+function groupRemovalWarnings(
+  closingIds: readonly number[],
+  kit: HostKit,
+  context: RenderContext
+): string[] {
+  const sizes = context.groupSizes;
+  if (!sizes || sizes.size === 0) {
+    return [];
+  }
+  const closing = new Map<number, number>();
+  for (const id of closingIds) {
+    const gid = kit.tabsById.get(id)?.groupId ?? null;
+    if (typeof gid === "number") {
+      closing.set(gid, (closing.get(gid) ?? 0) + 1);
+    }
+  }
+  const warnings: string[] = [];
+  for (const [gid, count] of closing) {
+    if (sizes.get(gid) === count) {
+      const info = context.groupLabels?.get(gid);
+      const name = info?.name || `#${gid}`;
+      warnings.push(`Includes the last tab of group \u201c${name}\u201d \u2014 the group will be removed.`);
+    }
+  }
+  return warnings;
+}
+
 function isToggleKey(key: string): boolean {
   return key === "Enter" || key === " " || key === "Spacebar" || key === "Space";
 }
@@ -1185,6 +1303,8 @@ interface ConfirmCloseOptions {
   tabs?: ClusterTab[];
   /** Override for the list heading; defaults to "Tabs being closed". */
   listLabel?: string;
+  /** Danger notes shown under the meta line, e.g. group-removal warnings. */
+  warnings?: string[];
 }
 
 const PREVIEW_LIMIT = 8;
@@ -1218,6 +1338,12 @@ function showConfirmDialog(options: ConfirmCloseOptions): Promise<boolean> {
       options.meta ?? `${options.count} tab${options.count === 1 ? "" : "s"} will be closed.`;
 
     card.append(title, meta);
+    for (const warning of options.warnings ?? []) {
+      const line = document.createElement("div");
+      line.className = "confirmWarning small";
+      line.textContent = `\u26a0 ${warning}`;
+      card.append(line);
+    }
 
     const tabs = options.tabs ?? [];
     if (tabs.length > 0) {

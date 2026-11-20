@@ -10,22 +10,31 @@ function accessTime(tab: browser.tabs.Tab): number {
  * Fetches every open tab and normalises the subset of fields the model consumes so the
  * rest of the pipeline can operate on a consistent, typed structure.
  */
-export async function queryOpenTabs(): Promise<TabSummary[]> {
-  const tabs = await browser.tabs.query({});
+export async function queryOpenTabs(options?: { windowId?: number }): Promise<TabSummary[]> {
+  // No windowId => every window (legacy behavior); with windowId => scope the
+  // popup to one window (default UX as of the tab-groups/multi-window work).
+  const query = options?.windowId != null ? { windowId: options.windowId } : {};
+  const tabs = await browser.tabs.query(query);
   return tabs
     .filter((tab): tab is browser.tabs.Tab & { id: number; url: string } =>
       typeof tab.id === "number" && typeof tab.url === "string"
     )
-    .map((tab) => ({
-      id: tab.id,
-      url: tab.url,
-      title: tab.title ?? tab.url,
-      pinned: Boolean(tab.pinned),
-      windowId: tab.windowId ?? 0,
-      favIconUrl: tab.favIconUrl ?? "",
-      lastAccessed: accessTime(tab),
-      active: Boolean(tab.active),
-    }));
+    .map((tab) => {
+      // Firefox 138+ tab groups (tabGroups API): absent on older runtimes, so
+      // read it off the raw object instead of the 115-era typings.
+      const rawGroupId = (tab as { groupId?: unknown }).groupId;
+      return {
+        id: tab.id,
+        url: tab.url,
+        title: tab.title ?? tab.url,
+        pinned: Boolean(tab.pinned),
+        windowId: tab.windowId ?? 0,
+        favIconUrl: tab.favIconUrl ?? "",
+        lastAccessed: accessTime(tab),
+        active: Boolean(tab.active),
+        groupId: typeof rawGroupId === "number" ? rawGroupId : null,
+      };
+    });
 }
 
 export async function closeTabs(ids: readonly number[]): Promise<void> {
@@ -99,20 +108,23 @@ export interface ReopenedTab {
  * the essentials — URL, pin state, owning window — and nothing more. If the
  * original window is gone, the tab is recreated in the current window.
  */
-export async function reopenTab(tab: ReopenedTab): Promise<void> {
+export async function reopenTab(tab: ReopenedTab): Promise<number | null> {
   try {
-    await browser.tabs.create({
+    const created = await browser.tabs.create({
       url: tab.url,
       active: false,
       pinned: tab.pinned,
       windowId: tab.windowId,
     });
+    return typeof created?.id === "number" ? created.id : null;
   } catch {
     // Window (or pin state) no longer valid — fall back to a plain create.
     try {
-      await browser.tabs.create({ url: tab.url, active: false });
+      const created = await browser.tabs.create({ url: tab.url, active: false });
+      return typeof created?.id === "number" ? created.id : null;
     } catch (error) {
       console.error("Failed to reopen reaped tab", tab.url, error);
+      return null;
     }
   }
 }

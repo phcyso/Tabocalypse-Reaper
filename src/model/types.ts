@@ -4,7 +4,16 @@ export enum NodeKind {
   Cluster = "cluster",
 }
 
-export type SortMode = "alpha" | "count" | "stale";
+export type SortMode = "alpha" | "count" | "stale" | "group";
+
+/** A Firefox tab group, resolved via the tabGroups API (FF 138+). */
+export interface GroupInfo {
+  id: number;
+  /** May be empty — Firefox allows unnamed groups. */
+  name: string;
+  /** tabGroups.Color: "blue" | "cyan" | "green" | "purple" | "red" | "yellow" | "orange" | "pink" | null. */
+  color: string | null;
+}
 
 export interface TabSummary {
   id: number;
@@ -17,6 +26,9 @@ export interface TabSummary {
   lastAccessed?: number;
   /** Whether the tab is the active tab of its window. */
   active?: boolean;
+  /** Firefox tab-group id (tabGroups API, FF 138+); null/undefined when ungrouped
+   * or when the runtime lacks the API. NEVER persisted — groupIds change on restore. */
+  groupId?: number | null;
 }
 
 export interface ClusterTab {
@@ -29,6 +41,7 @@ export interface ClusterTab {
   windowId: number;
   lastAccessed: number;
   active: boolean;
+  groupId: number | null;
 }
 
 export interface BuildOptions {
