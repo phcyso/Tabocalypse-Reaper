@@ -139,10 +139,9 @@ Triggered on **pushes of `v*` tags**:
 Bump the version in `src/manifest.json` and `package.json` manually **before** tagging.
 
 ### Website deploys (`.github/workflows/deploy-website.yml`)
-Builds the site on every `website/**` change and publishes it with
-`actions/deploy-pages`. The publish job self-skips while the repository is
-private (Pages is a free-plan limitation); once public, enable Pages
-(Settings → Pages → Source: GitHub Actions) and dispatch the workflow.
+Builds and publishes the site with `actions/deploy-pages` on every
+`website/**` change, or on demand via `workflow_dispatch` (Pages source:
+GitHub Actions).
 
 ### Version management
 
