@@ -1,6 +1,6 @@
 {
   "name": "tabocalypse-reaper",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Firefox extension that ends tab chaos: groups tabs by host → cluster (GitHub/AWS aware), shows favicons, filters, and reaps whole groups with a confirm guard.",
   "main": "dist/popup.js",
   "scripts": {

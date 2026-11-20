@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Tabocalypse Reaper",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "End your tab chaos: groups tabs by host \u2192 cluster (GitHub/AWS aware), shows favicons, filters, and reaps whole groups \u2014 with a confirm guard for big sweeps.",
   "author": "Kim Dowling",
   "homepage_url": "https://phcyso.github.io/Tabocalypse-Reaper/",
