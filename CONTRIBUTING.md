@@ -41,8 +41,8 @@ rendering into jsdom and asserting DOM + counts.
 
 One logical change per commit, imperative subject, e.g.
 `fix(f-2): resolve cluster ancestor before detaching tab row`. CI runs
-`npm run lint` on every PR and on merges to `main` (which also auto-bumps the
-patch version — don't bump patch yourself).
+`npm run lint` on every PR. Versions are bumped **manually** in
+`src/manifest.json` and `package.json`; tagging `vX.Y.Z` cuts a release.
 
 ## Where to look first
 
