@@ -57,6 +57,10 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); dates ar
 - `CHANGELOG.md` (this file).
 
 ### Changed
+- CI: PR/main builds upload the unsigned extension zip as a workflow
+  artifact with a **2-day retention** (was 30) and also run on direct
+  `main` pushes, so dev builds are always downloadable from the Actions
+  run page. PRs additionally get the download link commented.
 - **Single-tab closes are optimistic** (per-tab ✕ inside clusters and compact
   single-tab-host rows): the row and its counts update instantly on click
   instead of waiting for the `tabs.remove` roundtrip + rebuild — no more laggy

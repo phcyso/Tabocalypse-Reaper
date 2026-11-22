@@ -4,6 +4,17 @@ on:
   pull_request:
     branches:
       - main
+  # Dev builds also land on direct pushes to main — the artifact is the
+  # way to grab an installable zip without checking the repo out.
+  push:
+    branches:
+      - main
+
+# A new push/PR update supersedes the previous build (artifacts are per-run,
+# so the fresh run carries the fresh zip; old runs expire on their own TTL).
+concurrency:
+  group: build-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -39,7 +50,9 @@ jobs:
         with:
           name: firefox-extension-unsigned
           path: web-ext-artifacts/*.zip
-          retention-days: 30
+          # Dev builds are ephemeral: 2 days, then gone (re-run or re-push
+          # for a fresh one). Release builds live under Releases instead.
+          retention-days: 2
 
   comment-artifact:
     needs: build
@@ -65,6 +78,7 @@ jobs:
             '<!-- pr-build-artifact -->' \
             '**Latest Dev Extension Build**' \
             '' \
-            "- 🔗 [Download PR build artifact]($ARTIFACT_URL)")
+            "- 🔗 [Download PR build artifact]($ARTIFACT_URL)" \
+            "- 🗑 Artifact expires after 2 days — re-run the workflow for a fresh one.")
 
           gh pr comment --repo "$GITHUB_REPOSITORY" "$ISSUE_NUMBER" --body "$body"
