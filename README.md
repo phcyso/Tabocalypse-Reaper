@@ -55,6 +55,10 @@ Note: the release `.zip` is **unsigned** — Firefox only loads unsigned
 extensions temporarily (`about:debugging`), so for permanent installation use
 the AMO listing above once available.
 
+Releases also carry a `*-source.zip` — the source-code package for AMO
+reviewers (the shipped extension is compiled from TypeScript). Regenerate
+it locally with `npm run package:source`.
+
 ### Temporary install (development)
 
 ```bash

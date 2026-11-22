@@ -34,6 +34,11 @@ jobs:
       - name: Build extension zip
         run: npm run build
 
+      # AMO source-code submission package (TypeScript is transpiled, so
+      # reviewers must be able to rebuild: see the README inside the zip).
+      - name: Build AMO source package
+        run: npm run package:source
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
@@ -43,7 +48,11 @@ jobs:
 
             Download the extension package below, then install via about:addons
             (Install Add-on From File) or load it temporarily through
-            about:debugging. Bump the version in src/manifest.json and
+            about:debugging. The `*-source.zip` is the AMO source-code
+            submission package — attach it when AMO asks for source; the
+            README inside documents the rebuild.
+
+            Bump the version in src/manifest.json and
             package.json before tagging.
           files: web-ext-artifacts/*.zip
           draft: false

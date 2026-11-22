@@ -10,6 +10,7 @@
     "copy:assets": "node scripts/copy-assets.mjs",
     "prepare": "npm run clean && npm run build:ts && npm run copy:assets",
     "build": "npm run prepare && web-ext build --source-dir dist --overwrite-dest",
+    "package:source": "node scripts/package-source.mjs",
     "lint": "npm run typecheck && npm run test && npm run prepare && web-ext lint --source-dir dist",
     "test": "vitest run",
     "test:watch": "vitest watch",
