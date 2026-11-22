@@ -6,6 +6,16 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); dates ar
 ## [Unreleased]
 
 ### Added
+- **AMO submission prep**: `npm run package:source`
+  (`scripts/package-source.mjs`) builds the AMO source-code package
+  (`web-ext-artifacts/*-source.zip`) with a generated reviewer README —
+  extracting it and running `npm ci && npm run build` reproduces `dist/`
+  byte-for-byte. Release workflow attaches it to GitHub Releases next to
+  the extension zip.
+- **PRIVACY.md** (collects nothing, session-only storage, per-permission
+  rationale) for the AMO listing; README's permissions table now lists all
+  five manifest permissions (`tabGroups`, `contextualIdentities` were
+  missing) and links the policy.
 - **Window-scoped by default** with an "All windows" toolbar toggle
   (session-persisted): the popup now counts and reaps only the tabs of the
   window it was opened from, matching common expectations; the toggle
