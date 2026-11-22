@@ -120,7 +120,12 @@ body{ font: 12px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubun
 .clusterBody{ margin-top:4px; }
 .tab{ display:flex; align-items:center; gap:8px; padding:4px 6px; border-radius:8px; }
 .tab:hover{ background:rgba(124,58,237,0.08); }
-.tab .x, .soloRow .x{ border:none; background:transparent; color:var(--accent); cursor:pointer; font-size:12px; }
+/* Per-tab close: 24px square hit target (WCAG 2.5.8) — the bare 12px glyph
+   was too small to click reliably (user feedback 2026-11-19). Stays visually
+   quiet: transparent bg, soft accent tint on hover/focus. */
+.tab .x, .soloRow .x{ border:none; background:transparent; color:var(--accent); cursor:pointer; font-size:14px; line-height:1; width:24px; height:24px; min-width:24px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; flex-shrink:0; transition: background-color 120ms ease, color 120ms ease; }
+.tab .x:hover, .soloRow .x:hover{ background:rgba(124,58,237,0.16); color:var(--accent-2); }
+.tab .x:focus-visible, .soloRow .x:focus-visible{ outline:none; background:rgba(124,58,237,0.16); box-shadow:0 0 0 2px var(--bg), 0 0 0 4px var(--accent-2); }
 .tab.pinnedTab .title::before, .soloRow.pinnedTab .title::before{ content:"📌 "; font-size:14px; }
 .tab .ico{ width:14px; height:14px; border-radius:3px; background:var(--card); }
 .tab .title, .soloRow .title{ text-decoration:none; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
