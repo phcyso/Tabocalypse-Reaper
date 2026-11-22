@@ -18,8 +18,9 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); dates ar
   carry the container's color; duplicate copies in *different* containers are
   protected from "Close duplicates" and flagged informationally; Undo reopens
   closed tabs back into their container.
-- **Firefox tab-group support** (tabGroups API, FF 138+, silently
-  feature-detected on the 115 floor): rows carry colored group-name chips;
+- **Firefox tab-group support** (tabGroups API, FF 139+, silently
+  feature-detected — the `tabGroups` manifest permission requires Firefox 139,
+  which is now the `strict_min_version` floor): rows carry colored group-name chips;
   a new "Sort: By tab group" view groups tabs by their Firefox tab group
   (ungrouped tabs collect under "(no group)"); duplicate copies that live in
   *different* groups are protected from "Close duplicates" (cross-group
@@ -57,6 +58,10 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); dates ar
 - `CHANGELOG.md` (this file).
 
 ### Changed
+- **`strict_min_version` raised 115.0 → 139.0**: the `tabGroups`
+  manifest permission is only recognized from Firefox 139, so installs on
+  115–138 failed outright with an unknown-permission error. Firefox 139+
+  (June 2025+) is now the install floor.
 - CI: PR/main builds upload the unsigned extension zip as a workflow
   artifact with a **2-day retention** (was 30) and also run on direct
   `main` pushes, so dev builds are always downloadable from the Actions
