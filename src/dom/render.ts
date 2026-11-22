@@ -84,6 +84,11 @@ interface HostKit {
   dupBucketSizes: Map<number, number>;
   /** Keeper (survivor) id per placement bucket with 2+ copies. */
   keeperIds: Set<number>;
+  /** Where a tab's OTHER copies live (placement + count, own excluded). */
+  siblingPlacements: Map<
+    number,
+    Array<{ groupId: number | null; cookieStoreId: string; count: number }>
+  >;
   /** Duplicate copies that live in a different tab group: informational only. */
   crossGroupDupIds: Set<number>;
   /** Duplicate copies that live in a different container: informational only. */
@@ -282,11 +287,14 @@ function decorateHost(
   const staleTabs = kit.tabs.filter((tab) => !tab.pinned && isStale(tab.lastAccessed, decor.now));
   if (staleTabs.length > 0) {
     staleButton.hidden = false;
-    staleButton.title = `Close ${staleTabs.length} tabs older than ${STALE_LABEL} · pinned survive`;
+    staleButton.textContent = `Reap stale (${staleTabs.length})`;
+    staleButton.title = `Close ${staleTabs.length} tabs older than ${STALE_LABEL} · pinned survive — shows exactly which tabs before closing`;
     guardCloseButton(
       staleButton,
       async () => {
         const staleIds = staleTabs.map((tab) => tab.id);
+        // Stale reaps ALWAYS confirm (user feedback 2026-11-19: silent close
+        // with no indication of which tabs — worse than useless).
         if (
           !(await confirmBulkClose({
             count: staleIds.length,
@@ -294,6 +302,8 @@ function decorateHost(
             meta: `Older than ${STALE_LABEL} · pinned survive.`,
             listLabel: `Stale tabs (older than ${STALE_LABEL})`,
             tabs: staleTabs,
+            scope: reapScopeBreakdown(staleIds, kit, context),
+            force: true,
           }))
         ) {
           staleButton.disabled = false;
@@ -680,6 +690,10 @@ export interface DupChipInputs {
   active: boolean;
   crossGroup: boolean;
   crossContainer: boolean;
+  /** e.g. "2 · Google container" — where the OTHER copies live. */
+  elsewhereTitle?: string | null;
+  /** Placement label of THIS row, e.g. "Banking container". */
+  placementTitle?: string | null;
 }
 
 /** Pure classifier so the five states are unit-testable without DOM. */
@@ -689,9 +703,10 @@ export function dupChipState(inputs: DupChipInputs): DupChipState {
     return { kind: "none", show: false, text: "", cls: "", title: "", aria: "" };
   }
   if (bucketSize >= 2 && inputs.keeper) {
+    const where = inputs.placementTitle ? ` in ${inputs.placementTitle}` : "";
     return {
       kind: "keeper", show: true, text: "✓ kept", cls: "keeperDup",
-      title: "Newest copy in this placement — survives Close dups and cluster Reap",
+      title: `Newest copy${where} — survives Close dups and cluster Reap`,
       aria: "Newest duplicate copy, kept",
     };
   }
@@ -699,7 +714,7 @@ export function dupChipState(inputs: DupChipInputs): DupChipState {
     return {
       kind: "pinned", show: true, text: `×${bucketSize} · pinned`, cls: "protectedDup",
       title: "Duplicate of this page — pinned tabs survive bulk actions",
-      aria: `Duplicate copy, pinned and kept`,
+      aria: "Duplicate copy, pinned and kept",
     };
   }
   if (bucketSize >= 2 && inputs.active) {
@@ -717,7 +732,16 @@ export function dupChipState(inputs: DupChipInputs): DupChipState {
       aria: `Duplicate copy, closable: ${bucketSize} of ${urlTotal} copies are in this placement`,
     };
   }
-  // bucketSize <= 1: twins live in other placements — informational only.
+  // bucketSize <= 1: twins live in other placements — informational only,
+  // with the breakdown of WHERE they live (user feedback 2026-11-19: hidden).
+  if (inputs.elsewhereTitle) {
+    const aria = `Not closable: ${inputs.elsewhereTitle.replace(/ · /g, ", ")}. Same page, different placement.`;
+    return {
+      kind: "elsewhere", show: true, text: `${urlTotal} elsewhere`, cls: "crossGroupDup",
+      title: `Other copies: ${inputs.elsewhereTitle} — kept intentionally (same page, different container/group).`,
+      aria,
+    };
+  }
   const title = inputs.crossGroup
     ? "Copies of this page are open in different tab groups — kept intentionally"
     : inputs.crossContainer
@@ -780,6 +804,8 @@ function decorateTab(
     active: tab.active,
     crossGroup: kit.crossGroupDupIds.has(tab.id),
     crossContainer: kit.crossContainerDupIds.has(tab.id),
+    elsewhereTitle: elsewhereBreakdownTitle(tab, kit, context),
+    placementTitle: placementTitle(tab.cookieStoreId, tab.groupId, decor, context),
   });
   dupChip.hidden = !dupState.show;
   dupChip.textContent = dupState.text;
@@ -1132,6 +1158,62 @@ function groupColorHex(color: string | null | undefined): string {
   return GROUP_COLORS[color ?? ""] ?? "var(--accent)";
 }
 
+/** Human label for a placement, e.g. `Banking container · group "Research"`
+ * or `no container or group` (design v2: elsewhere pills must say where). */
+function placementDescription(
+  cookieStoreId: string | null | undefined,
+  groupId: number | null | undefined,
+  labels: {
+    groupLabels?: Map<number, GroupInfo>;
+    containerLabels?: Map<string, ContainerInfo>;
+  }
+): string {
+  const parts: string[] = [];
+  if (typeof groupId === "number" && groupId > 0) {
+    const info = labels.groupLabels?.get(groupId);
+    parts.push(info?.name ? `group “${info.name}”` : "a tab group");
+  }
+  if (cookieStoreId && cookieStoreId !== "firefox-default") {
+    const info = labels.containerLabels?.get(cookieStoreId);
+    parts.push(info ? `${info.name} container` : "a container");
+  }
+  return parts.length > 0 ? parts.join(" · ") : "no container or group";
+}
+
+/** "N · <placement>" lines for the OTHER copies of a tab's URL. */
+function elsewhereBreakdownTitle(
+  tab: ClusterTab,
+  kit: HostKit,
+  context: RenderContext
+): string | null {
+  const siblings = kit.siblingPlacements.get(tab.id);
+  if (!siblings || siblings.length === 0) {
+    return null;
+  }
+  const parts = siblings.map((s) => {
+    const container = s.cookieStoreId !== "firefox-default"
+      ? context.containerLabels?.get(s.cookieStoreId)?.name ?? "a container"
+      : null;
+    const group = s.groupId != null
+      ? context.groupLabels?.get(s.groupId)?.name ?? "a tab group"
+      : null;
+    const where = [group, container].filter(Boolean).join(" · ") || "no container or group";
+    return `${s.count} · ${where}`;
+  });
+  return parts.join(" · ");
+}
+
+/** Placement label of THIS row, for keeper/closable tooltips. */
+function placementTitle(
+  cookieStoreId: string | null,
+  groupId: number | null,
+  decor: TreeDecor,
+  context: RenderContext
+): string | null {
+  const label = placementDescription(cookieStoreId, groupId, context);
+  return label === "no container or group" ? null : label;
+}
+
 /** Chip naming the Firefox tab group a row belongs to (colored dot + name). */
 function applyGroupChip(
   chip: HTMLElement | null,
@@ -1225,15 +1307,28 @@ function decorateGroupWindowChip(
   winChip.title = `Tabs across ${windows.size} windows`;
 }
 
-/** Relative-age chip on tab rows, e.g. "3h" / "2d" (review F3). */
+/** Relative-age chip on tab rows, e.g. "3h" / "2d" (review F3). Goes danger
+ * when the tab is stale so "Reap stale"'s targets are visible before clicking
+ * (user feedback 2026-11-19: no indication of which tabs would close). */
 function applyAgeChip(ageChip: HTMLElement, tab: ClusterTab, decor: TreeDecor): void {
-  const label = formatAge(decor.now - tab.lastAccessed);
+  const age = decor.now - tab.lastAccessed;
+  const label = formatAge(age);
   if (!label) {
     return;
   }
   ageChip.hidden = false;
   ageChip.textContent = label;
   ageChip.title = `Last visited ${label} ago`;
+  if (isStale(tab.lastAccessed, decor.now)) {
+    // Mark only UNPINNED stale tabs — they are what "Reap stale" closes;
+    // pinned stale tabs survive bulk actions, so they must not look targeted.
+    if (tab.pinned) {
+      ageChip.title = `Pinned — survives bulk actions (last visited ${label} ago)`;
+    } else {
+      ageChip.classList.add("stale");
+      ageChip.title = `Stale — last visited ${label} ago (older than ${STALE_LABEL}); "Reap stale" would close this tab`;
+    }
+  }
 }
 
 /** "W2" chip on rows living in a non-focused window (review F2). */
@@ -1259,12 +1354,40 @@ function buildHostKit(host: HostNode): HostKit {
   for (const bucket of buckets) {
     keeperIds.add(pickDuplicateKeeper(bucket.tabs).id);
   }
+  // Sibling placements per tab: where the OTHER copies of the same URL live,
+  // so the "N elsewhere" pill can say where (user feedback 2026-11-19).
+  const siblingPlacements = new Map<
+    number,
+    Array<{ groupId: number | null; cookieStoreId: string; count: number }>
+  >();
+  for (const bucket of buckets) {
+    const tally = new Map<
+      string,
+      { groupId: number | null; cookieStoreId: string; count: number }
+    >();
+    for (const tab of bucket.tabs) {
+      const p = tabPlacement(tab);
+      const k = placementKey(p);
+      const entry = tally.get(k) ?? { groupId: p.groupId, cookieStoreId: p.cookieStoreId, count: 0 };
+      entry.count += 1;
+      tally.set(k, entry);
+    }
+    for (const tab of bucket.tabs) {
+      const own = placementKey(tabPlacement(tab));
+      const others = [...tally.entries()]
+        .filter(([k]) => k !== own)
+        .map(([, v]) => v)
+        .sort((a, b) => b.count - a.count);
+      siblingPlacements.set(tab.id, others);
+    }
+  }
   return {
     tabs,
     tabsById,
     dupSizes: duplicateGroupSizes(tabs),
     dupBucketSizes: duplicateBucketSizes(tabs),
     keeperIds,
+    siblingPlacements,
     crossGroupDupIds: new Set(crossGroupDuplicateIds(tabs)),
     crossContainerDupIds: new Set(crossContainerDuplicateIds(tabs)),
     closableDups: closableDuplicateIds(tabs),
@@ -1544,6 +1667,8 @@ interface ConfirmCloseOptions {
   scope?: ReapScopeResult;
   /** Rendered when non-empty even if `scope` is single-placement. */
   breakdown?: ReapScopeLine[];
+  /** Always show the modal regardless of CONFIRM_THRESHOLD (stale reaps). */
+  force?: boolean;
 }
 
 const PREVIEW_LIMIT = 8;
@@ -1556,7 +1681,7 @@ async function confirmBulkClose(options: ConfirmCloseOptions): Promise<boolean> 
   const scopeWarnings = options.scope?.warnings ?? [];
   const spansPlacements = scopeLines.length > 1;
   const hasWarnings = scopeWarnings.length > 0 || (options.warnings?.length ?? 0) > 0;
-  if (options.count < CONFIRM_THRESHOLD && !spansPlacements && !hasWarnings) {
+  if (options.count < CONFIRM_THRESHOLD && !spansPlacements && !hasWarnings && !options.force) {
     return true;
   }
   return showConfirmDialog({

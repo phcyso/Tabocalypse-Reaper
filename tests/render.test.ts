@@ -865,9 +865,23 @@ describe("staleness chips and Reap stale (review F3)", () => {
     const staleButtons = [...document.querySelectorAll<HTMLButtonElement>(".staleButton")];
     expect(staleButtons).toHaveLength(1);
     expect(staleButtons[0]!.hidden).toBe(false);
+    expect(staleButtons[0]!.textContent).toBe("Reap stale (1)");
     expect(staleButtons[0]!.title).toContain("older than 24h");
+    expect(staleButtons[0]!.title).toContain("shows exactly which tabs");
 
+    // stale rows are marked visually: the age chip goes danger (unpinned only)
+    const staleAgeChip = [...document.querySelectorAll<HTMLElement>(".tab .ageChip.stale")];
+    expect(staleAgeChip.length).toBe(1);
+
+    // stale reaps ALWAYS confirm (v2): modal shows the exact tabs, then closes
     await click(staleButtons[0]!);
+    await settle();
+    expect(document.querySelector(".confirmOverlay")).not.toBeNull();
+    expect(document.getElementById("confirmTitle")?.textContent).toContain("1 stale tab");
+
+    // (modal: "Reap 1 stale tab..." + preview -> accept)
+    await click(document.querySelector<HTMLElement>(".confirmOk")!);
+    await settle();
 
     expect(closeTabs).toHaveBeenCalledTimes(1);
     expect(vi.mocked(closeTabs).mock.calls[0]?.[0]).toEqual([510]);

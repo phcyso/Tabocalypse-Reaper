@@ -48,13 +48,20 @@ describe("dupChipState (five-state pill grammar, design v2)", () => {
     expect(state.title).toContain("Active tab stays");
   });
 
-  it("singleton bucket: muted '4 elsewhere' with placement title", () => {
+  it("singleton bucket: muted '4 elsewhere', breakdown overrides when given", () => {
     const state = dupChipState({ ...base, bucketSize: 1 });
     expect(state).toMatchObject({ kind: "elsewhere", text: "4 elsewhere", cls: "crossGroupDup" });
     expect(state.title).toContain("different tab groups");
+
+    const withWhere = dupChipState({
+      ...base, bucketSize: 1,
+      elsewhereTitle: "2 · Google container · 1 · no container or group",
+    });
+    expect(withWhere.title).toContain("Other copies: 2 · Google container");
+    expect(withWhere.aria).toContain("Not closable");
   });
 
-  it("elsewhere title prefers the group wording, falls back to containers", () => {
+  it("elsewhere fallback wording: group preferred, then containers", () => {
     const groupOnly = dupChipState({ ...base, bucketSize: 1, crossGroup: true, crossContainer: false });
     const containerOnly = dupChipState({ ...base, bucketSize: 1, crossGroup: false, crossContainer: true });
     expect(groupOnly.title).toContain("tab groups");
