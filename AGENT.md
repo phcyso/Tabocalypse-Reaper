@@ -15,6 +15,15 @@ features, fixes, docs, CI — land through a pull request:
 Direct pushes are rejected at the GitHub level. Scratch/ notes and other
 gitignored files are unaffected by this rule.
 
+### One PR per body of work
+
+- Keep **one open PR** for a given body of work. Follow-up tweaks that arise
+  during review (CI, docs, UI polish, build fixes) are committed to **that
+  same branch** — never opened as separate PRs.
+- Never create a second PR for changes that belong to an open one.
+- Close stray branches and their PRs immediately if one slips out.
+- A new PR is correct only for work the user asked for as a separate change.
+
 
 Purpose: Firefox WebExtension (manifest v2) that groups open tabs Host → Cluster for fast bulk closing and navigation. Source now lives in `src/` with modular TypeScript (`browser/`, `dom/`, `model/`, `theme/`, `utils/`) and `popup.ts` orchestrating them. Compile to `dist/` with `npm run prepare` before handing the directory to `web-ext`.
 
