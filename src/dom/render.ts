@@ -1,10 +1,11 @@
 import { activateTab, closeTab, closeTabs } from "../browser/tabs.js";
 import type { ReapedTab } from "../browser/storage.js";
 import { AUTO_COLLAPSE_HOST_COUNT, CONFIRM_THRESHOLD, STALE_MS } from "../shared/constants.js";
-import { bulkReapIds, closableDuplicateIds, crossContainerDuplicateIds, crossGroupDuplicateIds, duplicateGroupSizes } from "../model/index.js";
+import { bulkReapIds, closableDuplicateIds, crossContainerDuplicateIds, crossGroupDuplicateIds, duplicateBucketSizes, duplicateGroupSizes, findDuplicateBuckets, pickDuplicateKeeper } from "../model/index.js";
 import type { ClusterNode, ClusterTab, ContainerInfo, EmptyStateReason, GroupInfo, HostNode, RootNode, SortMode } from "../model/index.js";
 import { recordReap, undoLastReap } from "./reapUndo.js";
 import { requireDescendant, requireElement } from "./query.js";
+import { placementKey, tabPlacement } from "../model/placement.js";
 import { avatarHue, avatarLetter } from "../utils/avatar.js";
 import { formatAge, isStale } from "../utils/age.js";
 import { naturalCompare } from "../utils/naturalCompare.js";
@@ -77,7 +78,12 @@ interface TreeDecor {
 interface HostKit {
   tabs: ClusterTab[];
   tabsById: Map<number, ClusterTab>;
+  /** Total copies per tab across ALL placements (drives chip totals). */
   dupSizes: Map<number, number>;
+  /** Copies sharing the tab's EXACT placement (drives closability). */
+  dupBucketSizes: Map<number, number>;
+  /** Keeper (survivor) id per placement bucket with 2+ copies. */
+  keeperIds: Set<number>;
   /** Duplicate copies that live in a different tab group: informational only. */
   crossGroupDupIds: Set<number>;
   /** Duplicate copies that live in a different container: informational only. */
@@ -242,7 +248,7 @@ function decorateHost(
           tabs: reapIds
             .map((id) => kit.tabsById.get(id))
             .filter((tab): tab is ClusterTab => Boolean(tab)),
-          warnings: groupRemovalWarnings(reapIds, kit, context),
+          scope: reapScopeBreakdown(reapIds, kit, context),
         }))
       ) {
         closeButton.disabled = false;
@@ -310,9 +316,14 @@ function decorateHost(
 
   // "Close dups": keeps the newest (or active) copy of every duplicate group in the
   // host and closes the rest; pinned copies always survive (review F8).
+  const protectedDups = kit.tabs.filter(
+    (t) => (kit.dupSizes.get(t.id) ?? 0) > 1 && (kit.dupBucketSizes.get(t.id) ?? 1) <= 1
+  ).length;
   if (kit.closableDups.length > 0) {
     dupButton.hidden = false;
-    dupButton.title = `Close ${kit.closableDups.length} duplicate tabs — keeps newest copy · pinned survive`;
+    dupButton.title =
+      `Close ${kit.closableDups.length} duplicate tabs — keeps the newest copy in each placement · pinned survive` +
+      (protectedDups > 0 ? ` · ${protectedDups} spread across containers/groups stay` : "");
     guardCloseButton(
       dupButton,
       async () => {
@@ -573,7 +584,7 @@ function decorateCluster(
             tabs: reapIds
               .map((id) => kit.tabsById.get(id))
               .filter((tab): tab is ClusterTab => Boolean(tab)),
-            warnings: groupRemovalWarnings(reapIds, kit, context),
+            scope: reapScopeBreakdown(reapIds, kit, context),
           }))
         ) {
           closeButton.disabled = false;
@@ -641,6 +652,84 @@ function decorateCluster(
 }
 
 /**
+ * The five duplicate-pill states (design v2, scratch/2026-11-19):
+ *   keeper    -> "✓ kept" (accent) — the survivor; shown only when dup siblings exist
+ *   closable  -> "×N" or "×N/M" (danger) — Close dups will close this row
+ *   pinned    -> "×N · pinned" (muted) — protected by the pinned rule (F-5)
+ *   active    -> "×N" (muted) — an active tab is never closed (B2)
+ *   elsewhere -> "N elsewhere" (muted) — twins live in other placements
+ * A row shows exactly one of these (never both a closable and an informational pill).
+ */
+export type DupChipKind = "none" | "keeper" | "closable" | "pinned" | "active" | "elsewhere";
+
+export interface DupChipState {
+  kind: DupChipKind;
+  show: boolean;
+  text: string;
+  /** Extra class after .dupChip ("" = plain danger styling). */
+  cls: string;
+  title: string;
+  aria: string;
+}
+
+export interface DupChipInputs {
+  urlTotal: number;
+  bucketSize: number;
+  keeper: boolean;
+  pinned: boolean;
+  active: boolean;
+  crossGroup: boolean;
+  crossContainer: boolean;
+}
+
+/** Pure classifier so the five states are unit-testable without DOM. */
+export function dupChipState(inputs: DupChipInputs): DupChipState {
+  const { urlTotal, bucketSize } = inputs;
+  if (urlTotal <= 1) {
+    return { kind: "none", show: false, text: "", cls: "", title: "", aria: "" };
+  }
+  if (bucketSize >= 2 && inputs.keeper) {
+    return {
+      kind: "keeper", show: true, text: "✓ kept", cls: "keeperDup",
+      title: "Newest copy in this placement — survives Close dups and cluster Reap",
+      aria: "Newest duplicate copy, kept",
+    };
+  }
+  if (bucketSize >= 2 && inputs.pinned) {
+    return {
+      kind: "pinned", show: true, text: `×${bucketSize} · pinned`, cls: "protectedDup",
+      title: "Duplicate of this page — pinned tabs survive bulk actions",
+      aria: `Duplicate copy, pinned and kept`,
+    };
+  }
+  if (bucketSize >= 2 && inputs.active) {
+    return {
+      kind: "active", show: true, text: `×${bucketSize}`, cls: "protectedDup",
+      title: "Active tab stays",
+      aria: "Duplicate copy, kept because it is the active tab",
+    };
+  }
+  if (bucketSize >= 2) {
+    const text = bucketSize === urlTotal ? `×${bucketSize}` : `×${bucketSize}/${urlTotal}`;
+    return {
+      kind: "closable", show: true, text, cls: "",
+      title: `${bucketSize} of the ${urlTotal} copies of this page share this tab's container/group — Close dups thins them; the newest copy stays`,
+      aria: `Duplicate copy, closable: ${bucketSize} of ${urlTotal} copies are in this placement`,
+    };
+  }
+  // bucketSize <= 1: twins live in other placements — informational only.
+  const title = inputs.crossGroup
+    ? "Copies of this page are open in different tab groups — kept intentionally"
+    : inputs.crossContainer
+      ? "Copies of this page are open in different containers — kept intentionally"
+      : "Copies of this page live in other containers or groups — kept intentionally";
+  return {
+    kind: "elsewhere", show: true, text: `${urlTotal} elsewhere`, cls: "crossGroupDup",
+    title, aria: `Not closable: ${urlTotal} copies live across different containers or groups`,
+  };
+}
+
+/**
  * Hydrates the tab template with URL details and wires click handlers that either close
  * the specific tab or activate it in the current window without leaving the popup.
  */
@@ -683,25 +772,20 @@ function decorateTab(
   applyAgeChip(ageChip, tab, decor);
   applyRowWindowChip(winChip, tab, decor);
 
-  const dupSize = kit.dupSizes.get(tab.id);
-  if (dupSize && dupSize > 1 && kit.crossGroupDupIds.has(tab.id)) {
-    // Same page deliberately open in another tab group: inform, never suggest.
-    dupChip.hidden = false;
-    dupChip.textContent = `∑${dupSize}`;
-    dupChip.title = "Copies of this page are open in different tab groups — kept intentionally";
-    dupChip.classList.add("crossGroupDup");
-  } else if (dupSize && dupSize > 1 && kit.crossContainerDupIds.has(tab.id)) {
-    // Same page deliberately open in another container: inform, never suggest.
-    dupChip.hidden = false;
-    dupChip.textContent = `∑${dupSize}`;
-    dupChip.title = "Copies of this page are open in different containers — kept intentionally";
-    dupChip.classList.add("crossGroupDup");
-  } else if (dupSize && dupSize > 1) {
-    dupChip.hidden = false;
-    dupChip.textContent = `×${dupSize}`;
-    dupChip.title = `${dupSize} open copies of this page`;
-    dupChip.classList.remove("crossGroupDup");
-  }
+  const dupState = dupChipState({
+    urlTotal: kit.dupSizes.get(tab.id) ?? 0,
+    bucketSize: kit.dupBucketSizes.get(tab.id) ?? 0,
+    keeper: kit.keeperIds.has(tab.id),
+    pinned: tab.pinned,
+    active: tab.active,
+    crossGroup: kit.crossGroupDupIds.has(tab.id),
+    crossContainer: kit.crossContainerDupIds.has(tab.id),
+  });
+  dupChip.hidden = !dupState.show;
+  dupChip.textContent = dupState.text;
+  dupChip.className = `dupChip${dupState.cls ? ` ${dupState.cls}` : ""}`;
+  dupChip.title = dupState.title;
+  dupChip.setAttribute("aria-label", dupState.aria);
 
   applyGroupChip(groupChip, tab.groupId, decor);
   applyContainerChip(containerChip, tab.cookieStoreId, decor);
@@ -1170,10 +1254,17 @@ function applyRowWindowChip(winChip: HTMLElement, tab: ClusterTab, decor: TreeDe
 function buildHostKit(host: HostNode): HostKit {
   const tabs = [...host.children.values()].flatMap((cluster) => cluster.tabs);
   const tabsById = new Map(tabs.map((tab) => [tab.id, tab]));
+  const buckets = findDuplicateBuckets(tabs);
+  const keeperIds = new Set<number>();
+  for (const bucket of buckets) {
+    keeperIds.add(pickDuplicateKeeper(bucket.tabs).id);
+  }
   return {
     tabs,
     tabsById,
     dupSizes: duplicateGroupSizes(tabs),
+    dupBucketSizes: duplicateBucketSizes(tabs),
+    keeperIds,
     crossGroupDupIds: new Set(crossGroupDuplicateIds(tabs)),
     crossContainerDupIds: new Set(crossContainerDuplicateIds(tabs)),
     closableDups: closableDuplicateIds(tabs),
@@ -1302,33 +1393,125 @@ function updateStatsDisplay(): void {
   stats.textContent = formatStats(root.count);
 }
 
-/** Danger notes for the confirm modal: warns when a reap would close a tab
- * group's last member (Firefox removes the group in that case). */
-function groupRemovalWarnings(
-  closingIds: readonly number[],
+/** One placement line of the confirm-modal scope receipt (design v2). */
+export interface ReapScopeLine {
+  /** Tabs in this placement among the ids being closed. */
+  count: number;
+  /** Human label, e.g. `Banking container · group “Research”`. */
+  label: string;
+  /** Set when this line closes the last tab of its tab group. */
+  warning?: string;
+}
+
+export interface ReapScopeResult {
+  /** One line per distinct placement; [] when everything shares one placement. */
+  lines: ReapScopeLine[];
+  /** Group-deletion warnings that could not attach to a breakdown line
+   * (single-placement reaps) — rendered standalone, never suppressed. */
+  warnings: string[];
+}
+
+function groupLabel(gid: number, context: RenderContext): string {
+  const info = context.groupLabels?.get(gid);
+  // Unnamed groups (Firefox auto-ids like "Group 1795315876883061") read as
+  // noise in a receipt — "Unnamed group" is the friendlier fallback (A3).
+  return `group “${info?.name || "Unnamed group"}”`;
+}
+
+/**
+ * Builds the confirm-modal scope receipt: one line per distinct placement
+ * (group × container pair) among the ids being closed, ordered
+ * largest-first with the unplaced line last. Sums always equal ids.length
+ * (invariant, unit-tested). Group-deletion warnings attach to the first line
+ * carrying that group; when the whole reap is single-placement the lines are
+ * suppressed but the warnings are returned standalone — they are NEVER
+ * dropped (adversarial review A5).
+ */
+export function reapScopeBreakdown(
+  ids: readonly number[],
   kit: HostKit,
   context: RenderContext
-): string[] {
-  const sizes = context.groupSizes;
-  if (!sizes || sizes.size === 0) {
-    return [];
+): ReapScopeResult {
+  const perPlacement = new Map<
+    string,
+    { count: number; groupIds: Set<number>; cookieStoreId: string }
+  >();
+  for (const id of ids) {
+    const tab = kit.tabsById.get(id);
+    if (!tab) continue;
+    const placement = tabPlacement(tab);
+    const key = placementKey(placement);
+    const entry = perPlacement.get(key) ?? {
+      count: 0,
+      groupIds: new Set<number>(),
+      cookieStoreId: placement.cookieStoreId,
+    };
+    entry.count += 1;
+    if (placement.groupId != null) entry.groupIds.add(placement.groupId);
+    perPlacement.set(key, entry);
   }
-  const closing = new Map<number, number>();
-  for (const id of closingIds) {
+  if (perPlacement.size === 0) {
+    return { lines: [], warnings: [] };
+  }
+
+  // group-deletion detection across ALL lines (a group can span containers)
+  const closingPerGroup = new Map<number, number>();
+  for (const id of ids) {
     const gid = kit.tabsById.get(id)?.groupId ?? null;
-    if (typeof gid === "number") {
-      closing.set(gid, (closing.get(gid) ?? 0) + 1);
+    if (typeof gid === "number" && gid > 0) {
+      closingPerGroup.set(gid, (closingPerGroup.get(gid) ?? 0) + 1);
     }
   }
-  const warnings: string[] = [];
-  for (const [gid, count] of closing) {
-    if (sizes.get(gid) === count) {
-      const info = context.groupLabels?.get(gid);
-      const name = info?.name || `#${gid}`;
-      warnings.push(`Includes the last tab of group \u201c${name}\u201d \u2014 the group will be removed.`);
+
+  const lines: ReapScopeLine[] = [];
+  for (const [key, entry] of perPlacement) {
+    const containerPart =
+      entry.cookieStoreId !== "firefox-default"
+        ? context.containerLabels?.get(entry.cookieStoreId)?.name
+          ? `${context.containerLabels.get(entry.cookieStoreId)!.name} container`
+          : "a container"
+        : null;
+    const groupPart = [...entry.groupIds]
+      .map((gid) => groupLabel(gid, context))
+      .join(" · ");
+    const label = [groupPart, containerPart].filter(Boolean).join(" · ") ||
+      "elsewhere (no container or group)";
+    const line: ReapScopeLine = { count: entry.count, label };
+    for (const gid of entry.groupIds) {
+      const total = context.groupSizes?.get(gid);
+      const closing = closingPerGroup.get(gid) ?? 0;
+      if (total != null && total === closing) {
+        const info = context.groupLabels?.get(gid);
+        const name = info?.name || `Group ${gid}`;
+        line.warning = `Includes the last tab of group “${name}” — the group will be removed.`;
+        break;
+      }
+    }
+    lines.push(line);
+  }
+
+  // order: count desc, named placements before the unplaced line, label A→Z
+  lines.sort((a, b) => {
+    if (b.count !== a.count) return b.count - a.count;
+    const aUnnamed = a.label.startsWith("elsewhere");
+    const bUnnamed = b.label.startsWith("elsewhere");
+    if (aUnnamed !== bUnnamed) return aUnnamed ? 1 : -1;
+    return a.label.localeCompare(b.label);
+  });
+
+  // warnings that cannot attach to a multi-line breakdown go standalone
+  const standalone: string[] = [];
+  if (lines.length <= 1) {
+    for (const [gid, closing] of closingPerGroup) {
+      const total = context.groupSizes?.get(gid);
+      if (total != null && total === closing) {
+        const info = context.groupLabels?.get(gid);
+        const name = info?.name || `Group ${gid}`;
+        standalone.push(`Includes the last tab of group “${name}” — the group will be removed.`);
+      }
     }
   }
-  return warnings;
+  return { lines, warnings: standalone };
 }
 
 function isToggleKey(key: string): boolean {
@@ -1356,15 +1539,31 @@ interface ConfirmCloseOptions {
   listLabel?: string;
   /** Danger notes shown under the meta line, e.g. group-removal warnings. */
   warnings?: string[];
+  /** Placement breakdown (design v2): lines shown when the closing set spans
+   * more than one placement; single-placement reaps suppress the block. */
+  scope?: ReapScopeResult;
+  /** Rendered when non-empty even if `scope` is single-placement. */
+  breakdown?: ReapScopeLine[];
 }
 
 const PREVIEW_LIMIT = 8;
 
 async function confirmBulkClose(options: ConfirmCloseOptions): Promise<boolean> {
-  if (options.count < CONFIRM_THRESHOLD) {
+  // Modal rules (design v2): at/above the threshold, OR when the closing set
+  // spans more than one placement, OR when a group-deletion warning exists.
+  // Single-placement reaps below the threshold keep the silent fast path.
+  const scopeLines = options.scope?.lines ?? [];
+  const scopeWarnings = options.scope?.warnings ?? [];
+  const spansPlacements = scopeLines.length > 1;
+  const hasWarnings = scopeWarnings.length > 0 || (options.warnings?.length ?? 0) > 0;
+  if (options.count < CONFIRM_THRESHOLD && !spansPlacements && !hasWarnings) {
     return true;
   }
-  return showConfirmDialog(options);
+  return showConfirmDialog({
+    ...options,
+    breakdown: scopeLines,
+    warnings: [...(options.warnings ?? []), ...scopeWarnings],
+  });
 }
 
 function showConfirmDialog(options: ConfirmCloseOptions): Promise<boolean> {
@@ -1389,6 +1588,33 @@ function showConfirmDialog(options: ConfirmCloseOptions): Promise<boolean> {
       options.meta ?? `${options.count} tab${options.count === 1 ? "" : "s"} will be closed.`;
 
     card.append(title, meta);
+
+    // Scope receipt: only when the closing set spans MORE than one placement
+    // (single-placement reaps suppress the informational block; warnings are
+    // never suppressed — adversarial review A5).
+    const breakdown = options.breakdown ?? [];
+    if (breakdown.length > 1) {
+      const block = document.createElement("div");
+      block.className = "confirmBreakdown";
+      for (const scopeLine of breakdown) {
+        const row = document.createElement("div");
+        row.className = "confirmBreakdownLine small";
+        const count = document.createElement("span");
+        count.className = "confirmBreakdownCount";
+        count.textContent = String(scopeLine.count);
+        const label = document.createElement("span");
+        label.className = "confirmBreakdownLabel";
+        label.textContent = ` · ${scopeLine.label}`;
+        row.append(count, label);
+        if (scopeLine.warning) {
+          row.classList.add("confirmWarning");
+          row.title = scopeLine.warning;
+        }
+        block.append(row);
+      }
+      card.append(block);
+    }
+
     for (const warning of options.warnings ?? []) {
       const line = document.createElement("div");
       line.className = "confirmWarning small";

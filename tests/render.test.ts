@@ -990,8 +990,12 @@ describe("duplicate detection (review F8)", () => {
     const dupChips = [...document.querySelectorAll<HTMLElement>(".tab .dupChip")].filter(
       (chip) => !chip.hidden
     );
+    // Five-state pills (design v2): the keeper shows "✓ kept", the two doomed
+    // copies show the actionable ×3 pill.
     expect(dupChips).toHaveLength(3);
-    expect(dupChips.every((chip) => chip.textContent === "×3")).toBe(true);
+    expect(dupChips.filter((chip) => chip.textContent === "×3")).toHaveLength(2);
+    const keeperChip = dupChips.find((chip) => chip.classList.contains("keeperDup"));
+    expect(keeperChip?.textContent).toBe("✓ kept");
 
     const dupButton = document.querySelector<HTMLButtonElement>(".hostHeader .dupButton");
     expect(dupButton?.hidden).toBe(false);

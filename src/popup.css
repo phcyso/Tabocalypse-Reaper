@@ -176,6 +176,13 @@ body{ font: 12px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubun
 .confirmOk{ padding:5px 14px; border-radius:999px; border:1px solid var(--accent-strong); background:var(--accent-strong); color:var(--accent-contrast); font-weight:700; cursor:pointer; }
 .confirmOk:hover{ background:var(--accent-strong-active); border-color:var(--accent-strong-active); }
 .confirmOk:focus-visible{ outline:none; box-shadow:0 0 0 2px var(--bg), 0 0 0 4px var(--accent-2); }
+.confirmWarning{ color:var(--danger); }
+.confirmBreakdown{ display:flex; flex-direction:column; gap:2px; padding:6px 0; border-top:1px dashed var(--line); border-bottom:1px dashed var(--line); }
+.confirmBreakdownLine{ display:flex; align-items:baseline; gap:6px; }
+.confirmBreakdownCount{ font-weight:700; min-width:18px; text-align:right; font-variant-numeric:tabular-nums; color:var(--text); }
+.confirmBreakdownLabel{ color:var(--muted); }
+.dupChip.keeperDup{ color:var(--text); border-color:color-mix(in srgb, var(--accent) 35%, transparent); background:var(--badge); font-weight:600; }
+.dupChip.protectedDup{ color:var(--muted); border-color:var(--line); background:transparent; font-weight:400; }
 
 .small{ color:var(--muted); font-size:11px; }
 .spacer{ flex:1; }

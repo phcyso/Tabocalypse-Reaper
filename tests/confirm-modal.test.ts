@@ -113,6 +113,8 @@ function baseTab(overrides: Partial<TabSummary> = {}): TabSummary {
     favIconUrl: overrides.favIconUrl ?? "",
     lastAccessed: overrides.lastAccessed,
     active: overrides.active,
+    groupId: overrides.groupId ?? null,
+    cookieStoreId: overrides.cookieStoreId ?? "firefox-default",
   };
 }
 
@@ -137,10 +139,21 @@ describe("confirm modal (in-popup, replaces native confirm)", () => {
     resetCloseGuardForTests();
   });
 
-  function renderHostWithTabs(tabCount: number, context: Partial<RenderContext> = {}): void {
+  function renderHostWithTabs(
+    tabCount: number,
+    context: Partial<RenderContext> = {},
+    tabOverrides: (index: number) => Partial<TabSummary> = () => ({})
+  ): void {
     const tabs: TabSummary[] = [];
     for (let i = 0; i < tabCount; i += 1) {
-      tabs.push(baseTab({ id: 100 + i, url: `https://huge.test/page/${i}`, title: `Huge page ${i}` }));
+      tabs.push(
+        baseTab({
+          id: 100 + i,
+          url: `https://huge.test/page/${i}`,
+          title: `Huge page ${i}`,
+          ...tabOverrides(i),
+        })
+      );
     }
     const root = buildTabModel(tabs, { excludePinned: true, filter: "" });
     renderTree(root, {
@@ -215,6 +228,125 @@ describe("confirm modal (in-popup, replaces native confirm)", () => {
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
     await settle();
     expect(closeTabs).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("reap scope receipt (design v2)", () => {
+  // Local copies: renderHostWithTabs/setupDom are scoped to the first describe.
+  function localSetup(): void {
+    document.body.innerHTML = `
+      <section class="toolbar"><button id="refresh"></button>
+      <button id="refreshHint" hidden></button></section>
+      <div id="stats"></div><div id="tree"></div>
+      <div class="treeFade" aria-hidden="true"></div>
+      <div id="toast" hidden><span id="toastText"></span>
+      <button id="toastAction"></button></div>
+      <template id="hostTemplate"><section class="hostCard"><header class="hostHeader" tabindex="0" role="button" aria-expanded="false"><span class="twisty">▸</span><img class="ico hostIco"/><span class="icoFallback hostIcoFallback" hidden></span><span class="hostName"></span><span class="badge"></span><span class="pinChip" hidden></span><span class="winChip" hidden></span><span class="groupChip" hidden></span><span class="containerChip" hidden></span><div class="spacer"></div><button class="staleButton" hidden>Reap stale</button><button class="dupButton" hidden>Close dups</button><button class="close reapButton">Reap</button></header><div class="hostBody"></div></section></template>
+      <template id="clusterTemplate"><div class="cluster"><header class="clusterHeader" tabindex="0" role="button" aria-expanded="false"><span class="twisty">▸</span><img class="ico clusterIco"/><span class="icoFallback clusterIcoFallback" hidden></span><span class="clusterName"></span><span class="badge small"></span><span class="pinChip" hidden></span><span class="dupChip" hidden></span><div class="spacer"></div><button class="close reapButton">Reap</button></header><div class="clusterBody"></div></div></template>
+      <template id="tabTemplate"><div class="tab"><img class="ico"/><span class="icoFallback tabIcoFallback" hidden></span><a class="title" target="_self"></a><span class="path small"></span><span class="ageChip" hidden></span><span class="winChip" hidden></span><span class="dupChip" hidden></span><span class="groupChip" hidden></span><span class="containerChip" hidden></span><button class="x">✕</button></div></template>
+      <template id="soloTemplate"><div class="soloRow"><img class="ico soloIco"/><span class="icoFallback soloIcoFallback" hidden></span><span class="soloHost small"></span><a class="title soloTitle" target="_self"></a><span class="path small"></span><span class="ageChip" hidden></span><span class="winChip" hidden></span><span class="groupChip" hidden></span><span class="containerChip" hidden></span><button class="x">✕</button></div></template>`;
+    vi.clearAllMocks();
+    mocks.sweepStore.current = null;
+    resetCloseGuardForTests();
+  }
+
+  function renderHostWithTabsLocal(
+    tabCount: number,
+    context: Partial<RenderContext> = {},
+    tabOverrides: (index: number) => Partial<TabSummary> = () => ({})
+  ): void {
+    localSetup();
+    const tabs: TabSummary[] = [];
+    for (let i = 0; i < tabCount; i += 1) {
+      tabs.push(
+        baseTab({
+          id: 100 + i,
+          url: `https://huge.test/page/${i}`,
+          title: `Huge page ${i}`,
+          ...tabOverrides(i),
+        })
+      );
+    }
+    const root = buildTabModel(tabs, { excludePinned: true, filter: "" });
+    renderTree(root, {
+      sortMode: "count",
+      onRefresh: vi.fn(async () => {}),
+      ...context,
+    });
+  }
+
+  beforeEach(() => {
+    localSetup();
+  });
+
+  it("shows placement breakdown lines when the closing set spans placements", async () => {
+    // 14 tabs >= threshold: 8 in container "abc", 6 in group 7
+    renderHostWithTabsLocal(
+      14,
+      {
+        containerLabels: new Map([["abc", { cookieStoreId: "abc", name: "Banking", color: "#ec7f2d" }]]),
+        groupLabels: new Map([[7, { id: 7, name: "Research", color: "purple" }]]),
+      },
+      (i) => ({
+        cookieStoreId: i < 8 ? "abc" : "firefox-default",
+        groupId: i < 8 ? null : 7,
+      })
+    );
+    const reap = document.querySelector<HTMLElement>(".hostCard .reapButton")!;
+    await click(reap);
+    await settle();
+
+    const lines = [...document.querySelectorAll(".confirmBreakdownLine")];
+    expect(lines.length).toBe(2);
+    expect(lines[0].textContent).toContain("8 · Banking container");
+    expect(lines[1].textContent).toContain("6 · group “Research”");
+    // informational breakdown renders no standalone warnings
+    expect(document.querySelectorAll(".confirmWarning").length).toBe(0);
+    await click(document.querySelector<HTMLElement>(".confirmCancel")!);
+  });
+
+  it("suppresses the breakdown for a single-placement reap", async () => {
+    renderHostWithTabsLocal(14);
+    const reap = document.querySelector<HTMLElement>(".hostCard .reapButton")!;
+    await click(reap);
+    await settle();
+    expect(document.querySelector(".confirmBreakdown")).toBeNull();
+    await click(document.querySelector<HTMLElement>(".confirmCancel")!);
+  });
+
+  it("shows the modal below threshold when the set spans placements", async () => {
+    renderHostWithTabsLocal(5, {}, (i) => ({
+      cookieStoreId: i < 3 ? "abc" : "firefox-default",
+    }));
+    const reap = document.querySelector<HTMLElement>(".hostCard .reapButton")!;
+    await click(reap);
+    await settle();
+    expect(document.querySelector(".confirmOverlay")).not.toBeNull();
+    await click(document.querySelector<HTMLElement>(".confirmCancel")!);
+  });
+
+  it("never emits a group-removal warning for the ungrouped sentinel (S1)", async () => {
+    // Real Firefox reports groupId -1 (TAB_GROUP_ID_NONE); counting it made a
+    // single-host window reap claim "Includes the last tab of group #-1".
+    renderHostWithTabsLocal(12, { groupSizes: new Map([[-1, 12]]) }, () => ({
+      groupId: -1,
+    }));
+    const reap = document.querySelector<HTMLElement>(".hostCard .reapButton")!;
+    await click(reap);
+    await settle();
+    expect(document.querySelectorAll(".confirmWarning").length).toBe(0);
+    await click(document.querySelector<HTMLElement>(".confirmCancel")!);
+  });
+
+  it("renders a standalone group-deletion warning on a single-placement reap", async () => {
+    renderHostWithTabsLocal(12, { groupSizes: new Map([[7, 12]]) }, () => ({ groupId: 7 }));
+    const reap = document.querySelector<HTMLElement>(".hostCard .reapButton")!;
+    await click(reap);
+    await settle();
+    const warnings = [...document.querySelectorAll(".confirmWarning")].map((w) => w.textContent);
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain("the group will be removed");
+    await click(document.querySelector<HTMLElement>(".confirmCancel")!);
   });
 });
 
