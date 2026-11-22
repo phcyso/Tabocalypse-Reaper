@@ -55,6 +55,10 @@ Note: the release `.zip` is **unsigned** — Firefox only loads unsigned
 extensions temporarily (`about:debugging`), so for permanent installation use
 the AMO listing above once available.
 
+Releases also carry a `*-source.zip` — the source-code package for AMO
+reviewers (the shipped extension is compiled from TypeScript). Regenerate
+it locally with `npm run package:source`.
+
 ### Temporary install (development)
 
 ```bash
@@ -73,10 +77,12 @@ npm run prepare
 | `tabs` | Enumerate open tabs (title/URL/favicon) and close the ones you reap. |
 | `storage` | Remember your sort order and "exclude pinned" choice for the session, and keep the last reap so Undo works. |
 | `theme` | Match the popup's colours to your Firefox theme. |
+| `tabGroups` | Name and colour your existing Firefox tab groups in the list. |
+| `contextualIdentities` | Label rows with their container's name and colour. |
 
 **Tabocalypse Reaper collects no data.** Everything stays in your browser:
 no analytics, no network requests, no remote code. Declared in the manifest
-via `data_collection_permissions: ["none"]`.
+via `data_collection_permissions: ["none"]`. Full policy: [PRIVACY.md](PRIVACY.md).
 
 ## Screenshots
 

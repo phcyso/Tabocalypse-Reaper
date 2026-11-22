@@ -6,6 +6,16 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); dates ar
 ## [Unreleased]
 
 ### Added
+- **AMO submission prep**: `npm run package:source`
+  (`scripts/package-source.mjs`) builds the AMO source-code package
+  (`web-ext-artifacts/*-source.zip`) with a generated reviewer README —
+  extracting it and running `npm ci && npm run build` reproduces `dist/`
+  byte-for-byte. Release workflow attaches it to GitHub Releases next to
+  the extension zip.
+- **PRIVACY.md** (collects nothing, session-only storage, per-permission
+  rationale) for the AMO listing; README's permissions table now lists all
+  five manifest permissions (`tabGroups`, `contextualIdentities` were
+  missing) and links the policy.
 - **Window-scoped by default** with an "All windows" toolbar toggle
   (session-persisted): the popup now counts and reaps only the tabs of the
   window it was opened from, matching common expectations; the toggle
@@ -18,8 +28,9 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); dates ar
   carry the container's color; duplicate copies in *different* containers are
   protected from "Close duplicates" and flagged informationally; Undo reopens
   closed tabs back into their container.
-- **Firefox tab-group support** (tabGroups API, FF 138+, silently
-  feature-detected on the 115 floor): rows carry colored group-name chips;
+- **Firefox tab-group support** (tabGroups API, FF 139+, silently
+  feature-detected — the `tabGroups` manifest permission requires Firefox 139,
+  which is now the `strict_min_version` floor): rows carry colored group-name chips;
   a new "Sort: By tab group" view groups tabs by their Firefox tab group
   (ungrouped tabs collect under "(no group)"); duplicate copies that live in
   *different* groups are protected from "Close duplicates" (cross-group
@@ -57,6 +68,10 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/); dates ar
 - `CHANGELOG.md` (this file).
 
 ### Changed
+- **`strict_min_version` raised 115.0 → 139.0**: the `tabGroups`
+  manifest permission is only recognized from Firefox 139, so installs on
+  115–138 failed outright with an unknown-permission error. Firefox 139+
+  (June 2025+) is now the install floor.
 - CI: PR/main builds upload the unsigned extension zip as a workflow
   artifact with a **2-day retention** (was 30) and also run on direct
   `main` pushes, so dev builds are always downloadable from the Actions
