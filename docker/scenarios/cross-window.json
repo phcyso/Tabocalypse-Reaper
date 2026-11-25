@@ -1,8 +1,16 @@
 {
   "name": "cross-window",
-  "title": "Cross-window tab chaos — counted across windows",
-  "themes": ["dark"],
-  "gen": {"kind": "monster"},
+  "title": "Cross-window tab chaos \u2014 counted across windows",
+  "themes": [
+    "dark"
+  ],
+  "gen": {
+    "kind": "monster"
+  },
   "windows": 2,
-  "asserts": {"hostCountMin": 10, "stats": "tabs matched"}
+  "asserts": {
+    "hostCountMin": 10,
+    "stats": "tabs matched"
+  },
+  "allWindowsToggle": true
 }

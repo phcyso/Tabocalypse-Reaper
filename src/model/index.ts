@@ -7,11 +7,15 @@ export {
   closableDuplicateIds,
   crossContainerDuplicateIds,
   crossGroupDuplicateIds,
+  duplicateBucketSizes,
   duplicateGroupSizes,
+  findDuplicateBuckets,
   findDuplicateGroups,
   pickDuplicateKeeper,
 } from "./duplicates.js";
-export type { DuplicateCandidate, DuplicateGroup } from "./duplicates.js";
+export type { DuplicateBucket, DuplicateCandidate, DuplicateGroup } from "./duplicates.js";
+export { placementKey, tabPlacement, DEFAULT_COOKIE_STORE } from "./placement.js";
+export type { Placement } from "./placement.js";
 export type { GroupInfo, ContainerInfo } from "./types.js";
 export type { EmptyStateReason } from "./emptyState.js";
 export type {

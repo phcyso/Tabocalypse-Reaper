@@ -1,4 +1,5 @@
 import { normalizeUrl } from "../utils/url.js";
+import { placementKey, tabPlacement } from "./placement.js";
 
 /** The minimum tab shape duplicate detection needs. */
 export interface DuplicateCandidate {
@@ -38,6 +39,60 @@ export function findDuplicateGroups(tabs: readonly DuplicateCandidate[]): Duplic
   return [...groups.entries()]
     .filter(([, bucket]) => bucket.length > 1)
     .map(([key, tabs]) => ({ key, tabs }));
+}
+
+/** One (normalizedUrl, placement) bucket: same page, same place. */
+export interface DuplicateBucket {
+  /** Normalized URL shared by every tab in the bucket. */
+  key: string;
+  groupId: number | null;
+  cookieStoreId: string;
+  /** Members in input order; always length >= 2 in returned buckets. */
+  tabs: DuplicateCandidate[];
+}
+
+/**
+ * Partitions tabs by (normalizeUrl(url), placement) and returns buckets with
+ * 2+ members, in first-seen URL order with tabs in input order. Pure.
+ *
+ * Replaces the former all-or-nothing placement guard: redundancy is a
+ * WITHIN-place property, so each placement bucket is independently
+ * dedupeable while cross-bucket copies stay protected (user feedback
+ * 2026-11-19: same URL deliberately open in multiple groups/containers).
+ */
+export function findDuplicateBuckets(tabs: readonly DuplicateCandidate[]): DuplicateBucket[] {
+  const buckets = new Map<string, DuplicateBucket>();
+  for (const tab of tabs) {
+    const key = normalizeUrl(tab.url);
+    const placement = tabPlacement(tab);
+    const bucketKey = `${key}|${placementKey(placement)}`;
+    const bucket = buckets.get(bucketKey);
+    if (bucket) {
+      bucket.tabs.push(tab);
+    } else {
+      buckets.set(bucketKey, {
+        key,
+        groupId: placement.groupId,
+        cookieStoreId: placement.cookieStoreId,
+        tabs: [tab],
+      });
+    }
+  }
+  return [...buckets.values()].filter((bucket) => bucket.tabs.length > 1);
+}
+
+/**
+ * Per-tab count of copies sharing the tab's EXACT placement. Tabs whose
+ * bucket holds only themselves are ABSENT (mirrors duplicateGroupSizes).
+ */
+export function duplicateBucketSizes(tabs: readonly DuplicateCandidate[]): Map<number, number> {
+  const sizes = new Map<number, number>();
+  for (const bucket of findDuplicateBuckets(tabs)) {
+    for (const tab of bucket.tabs) {
+      sizes.set(tab.id, bucket.tabs.length);
+    }
+  }
+  return sizes;
 }
 
 /**
@@ -85,13 +140,13 @@ function sameContainerPlacement(tabs: readonly DuplicateCandidate[]): boolean {
  */
 export function closableDuplicateIds(tabs: readonly DuplicateCandidate[]): number[] {
   const closable: number[] = [];
-  for (const group of findDuplicateGroups(tabs)) {
-    if (!sameGroupPlacement(group.tabs) || !sameContainerPlacement(group.tabs)) {
-      continue;
-    }
-    const keeper = pickDuplicateKeeper(group.tabs);
-    for (const tab of group.tabs) {
-      if (tab.id !== keeper.id && !tab.pinned) {
+  for (const bucket of findDuplicateBuckets(tabs)) {
+    const keeper = pickDuplicateKeeper(bucket.tabs);
+    for (const tab of bucket.tabs) {
+      // Never close the keeper, a pinned copy, or an ACTIVE tab (closing
+      // another window's focused tab via a popup docked elsewhere is the
+      // worst possible outcome — adversarial review B2, 2026-11-19).
+      if (tab.id !== keeper.id && !tab.pinned && !tab.active) {
         closable.push(tab.id);
       }
     }

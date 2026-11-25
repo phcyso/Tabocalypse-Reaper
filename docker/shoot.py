@@ -826,6 +826,20 @@ def run_scenario(scen, theme, out_dir):
         manifest["statsAtOpen"] = stats
         log(f"popup open, rendered in {render_ms}ms, stats={stats!r}")
 
+        # cross-window story needs the all-windows view on
+        if scen.get("allWindowsToggle"):
+            ch.popup_eval("""
+                (function () {
+                    const doc = content.document;
+                    const cb = doc.getElementById('allWindows');
+                    if (!cb) { sendAsyncMessage('reaper/result', {error: 'no allWindows cb'}); return; }
+                    cb.checked = true;
+                    cb.dispatchEvent(new Event('change', {bubbles: true}));
+                    sendAsyncMessage('reaper/result', {toggled: true});
+                })();
+            """)
+            time.sleep(0.8)
+
         # exact popup rect once open (crop source)
         rect = get_popup_rect(ch)
         crop = crop_geometry(rect) if rect else None

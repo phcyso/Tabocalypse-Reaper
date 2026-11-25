@@ -42,7 +42,9 @@ async function refresh(): Promise<void> {
     : new Map();
   const groupSizes = new Map<number, number>();
   for (const tab of tabs) {
-    if (typeof tab.groupId === "number") {
+    // Only real groups (positive ids): FF reports -1 (TAB_GROUP_ID_NONE) for
+    // ungrouped tabs and counting it produced a bogus "#-1" removal warning.
+    if (typeof tab.groupId === "number" && tab.groupId > 0) {
       groupSizes.set(tab.groupId, (groupSizes.get(tab.groupId) ?? 0) + 1);
     }
   }

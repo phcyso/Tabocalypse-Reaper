@@ -1,5 +1,12 @@
 # Tabocalypse Reaper — AI Contributor Guide
 
+
+> **⚠️ Workflow: PRs only.** Never push directly to `main` — the branch is
+> protected and rejects direct pushes. Branch off `origin/main`, push a
+> feature branch, open a PR; CI posts an installable build artifact (2-day
+> retention) on the PR. Merge only with CI green + review.
+> **One PR per body of work**: fold follow-up tweaks (CI, docs, polish) into
+> the open PR's branch — never spin parallel PRs for related changes.
 Firefox WebExtension (Manifest v2) that groups tabs by **host → cluster** and
 reaps them in bulk, with an undo toast. This file is a **router**: it tells you
 where things live and which commands to run. The deep references are

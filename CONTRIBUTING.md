@@ -13,6 +13,14 @@ npm run verify:popup   # green build + harness fixtures + full test suite
 
 Requires Node (see `.nvmrc`) and Firefox for `npm run dev` / end-to-end runs.
 
+## Development flow
+
+All changes land through **pull requests** — direct pushes to `main` are not
+used. Every PR automatically gets a CI build: lint + tests + web-ext build,
+uploaded as a downloadable extension artifact (2-day retention) and linked in
+a PR comment. Merge to `main` only after CI is green and the change has been
+reviewed (screenshots for UI changes).
+
 ## Ground rules
 
 - **Manifest v2, Firefox-first.** `browser_action`, no Chrome MV3 fields.

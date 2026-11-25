@@ -94,14 +94,15 @@ describe("container-aware duplicate policy", () => {
     expect(crossContainerDuplicateIds(tabs)).toEqual([]);
   });
 
-  it("protects the whole duplicate group when placements are mixed", () => {
+  it("closes only the same-placement copies when placements are mixed", () => {
     const tabs = [
       { ...base, id: 1, cookieStoreId: "abc", lastAccessed: 300 },
       { ...base, id: 2, cookieStoreId: "abc" },
       { ...base, id: 3, cookieStoreId: "firefox-default" },
     ];
-    // mixed placements: nothing auto-closable, every copy flagged informationally
-    expect(closableDuplicateIds(tabs)).toEqual([]);
+    // placement-bucketed (design v2): the two abc copies dedupe within their
+    // bucket; the default-container copy is protected (cross-placement).
+    expect(closableDuplicateIds(tabs)).toEqual([2]);
     expect(crossContainerDuplicateIds(tabs).sort()).toEqual([1, 2, 3]);
   });
 });

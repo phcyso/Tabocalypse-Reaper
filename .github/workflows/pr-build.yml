@@ -44,12 +44,21 @@ jobs:
       - name: Build extension
         run: npm run build
 
+      # web-ext emits a versioned .zip; rename to .xpi so the downloaded
+      # artifact is directly installable (no unzip-the-inner-zip dance).
+      - name: Prepare installable xpi
+        run: |
+          mkdir -p artifact
+          VER=$(node -p "require('./package.json').version")
+          cp web-ext-artifacts/tabocalypse_reaper-${VER}.zip "artifact/tabocalypse-reaper-${VER}.xpi"
+          ls -la artifact/
+
       - name: Upload artifact
         id: upload_artifact
         uses: actions/upload-artifact@v7
         with:
           name: firefox-extension-unsigned
-          path: web-ext-artifacts/*.zip
+          path: artifact/*.xpi
           # Dev builds are ephemeral: 2 days, then gone (re-run or re-push
           # for a fresh one). Release builds live under Releases instead.
           retention-days: 2

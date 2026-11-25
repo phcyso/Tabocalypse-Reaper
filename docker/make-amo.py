@@ -26,10 +26,15 @@ def run(cmd):
 
 
 def full_to_amo(src, dst):
-    """1920x1080 -> 1600x1000 (1.6:1) crop anchored RIGHT so the popup
-    (x 1287..1868) stays fully in frame; -> resize 1280x800."""
-    run(["convert", str(src), "-crop", "1600x1000+320+40", "+repage",
-         "-resize", f"{W}x{H}!", str(dst)])
+    """1920x1080 full frame -> scale to 1280 wide (1280x720), paste centred on
+    a branded gradient canvas at 1280x800 (AMO's 1.6:1). Zero clipping: the
+    whole window + popup stay in frame; bands read as intentional branding."""
+    tmp = "/tmp/_scaled.png"
+    run(["convert", str(src), "-resize", "1280x720!", tmp])
+    run(["convert", "-size", f"{W}x{H}", "gradient:rgb(46,27,102)-rgb(124,77,255)", str(dst)])
+    y = (H - 720) // 2
+    run(["composite", "-geometry", f"+0+{y}", tmp, str(dst), str(dst)])
+
 
 
 def crop_to_amo(src, dst):

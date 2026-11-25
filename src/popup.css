@@ -120,7 +120,12 @@ body{ font: 12px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubun
 .clusterBody{ margin-top:4px; }
 .tab{ display:flex; align-items:center; gap:8px; padding:4px 6px; border-radius:8px; }
 .tab:hover{ background:rgba(124,58,237,0.08); }
-.tab .x, .soloRow .x{ border:none; background:transparent; color:var(--accent); cursor:pointer; font-size:12px; }
+/* Per-tab close: 24px square hit target (WCAG 2.5.8) — the bare 12px glyph
+   was too small to click reliably (user feedback 2026-11-19). Stays visually
+   quiet: transparent bg, soft accent tint on hover/focus. */
+.tab .x, .soloRow .x{ border:none; background:transparent; color:var(--accent); cursor:pointer; font-size:14px; line-height:1; width:24px; height:24px; min-width:24px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; flex-shrink:0; transition: background-color 120ms ease, color 120ms ease; }
+.tab .x:hover, .soloRow .x:hover{ background:rgba(124,58,237,0.16); color:var(--accent-2); }
+.tab .x:focus-visible, .soloRow .x:focus-visible{ outline:none; background:rgba(124,58,237,0.16); box-shadow:0 0 0 2px var(--bg), 0 0 0 4px var(--accent-2); }
 .tab.pinnedTab .title::before, .soloRow.pinnedTab .title::before{ content:"📌 "; font-size:14px; }
 .tab .ico{ width:14px; height:14px; border-radius:3px; background:var(--card); }
 .tab .title, .soloRow .title{ text-decoration:none; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -144,6 +149,7 @@ body{ font: 12px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubun
 .containerChip::before{ content:""; display:inline-block; width:8px; height:8px; border-radius:999px; background:var(--container-color, var(--accent)); margin-right:4px; vertical-align:-1px; }
 .ageChip, .winChip, .dupChip{ font-size:10px; line-height:16px; padding:0 6px; border-radius:999px; white-space:nowrap; flex-shrink:0; }
 .ageChip{ color:var(--muted); border:1px solid var(--line); }
+.ageChip.stale{ color:var(--danger); border-color:color-mix(in srgb, var(--danger) 55%, var(--line)); background:color-mix(in srgb, var(--danger-bg) 30%, var(--card)); font-weight:600; }
 .winChip{ color:var(--accent); border:1px solid color-mix(in srgb, var(--accent) 45%, transparent); background:color-mix(in srgb, var(--accent) 10%, var(--card)); font-weight:600; }
 .dupChip{ color:var(--danger); border:1px solid color-mix(in srgb, var(--danger) 45%, transparent); background:color-mix(in srgb, var(--danger-bg) 30%, var(--card)); font-weight:600; }
 .dupChip.crossGroupDup{ color:var(--muted); border-color:var(--line); background:transparent; font-weight:400; }
@@ -176,6 +182,13 @@ body{ font: 12px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubun
 .confirmOk{ padding:5px 14px; border-radius:999px; border:1px solid var(--accent-strong); background:var(--accent-strong); color:var(--accent-contrast); font-weight:700; cursor:pointer; }
 .confirmOk:hover{ background:var(--accent-strong-active); border-color:var(--accent-strong-active); }
 .confirmOk:focus-visible{ outline:none; box-shadow:0 0 0 2px var(--bg), 0 0 0 4px var(--accent-2); }
+.confirmWarning{ color:var(--danger); }
+.confirmBreakdown{ display:flex; flex-direction:column; gap:2px; padding:6px 0; border-top:1px dashed var(--line); border-bottom:1px dashed var(--line); }
+.confirmBreakdownLine{ display:flex; align-items:baseline; gap:6px; }
+.confirmBreakdownCount{ font-weight:700; min-width:18px; text-align:right; font-variant-numeric:tabular-nums; color:var(--text); }
+.confirmBreakdownLabel{ color:var(--muted); }
+.dupChip.keeperDup{ color:var(--text); border-color:color-mix(in srgb, var(--accent) 35%, transparent); background:var(--badge); font-weight:600; }
+.dupChip.protectedDup{ color:var(--muted); border-color:var(--line); background:transparent; font-weight:400; }
 
 .small{ color:var(--muted); font-size:11px; }
 .spacer{ flex:1; }
